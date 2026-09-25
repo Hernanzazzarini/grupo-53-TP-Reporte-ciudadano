@@ -64,6 +64,6 @@ npx tsc --noEmit     # que no haya errores de tipos
 npx expo-doctor      # que las dependencias sean coherentes con el SDK
 ```
 
-> ⚠️ **No correr `npm audit fix --force`.** Rompe las versiones que Expo fija
+> **No correr `npm audit fix --force`.** Rompe las versiones que Expo fija
 > para el SDK. Los avisos de vulnerabilidades en un proyecto Expo son normales.
 

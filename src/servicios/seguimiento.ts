@@ -12,6 +12,11 @@ export const SIMULAR = {
   cambioDeEstado: false,
 };
 
+const conSimulacion = (reporte: Reporte): Reporte =>
+  SIMULAR.cambioDeEstado && reporte.id === 'rep-00431'
+    ? { ...reporte, estado: 'en_revision' as const }
+    : reporte;
+
 export class ErrorDeRed extends Error {
   constructor() {
     super('No pudimos conectarnos. Revisá tu conexión e intentá de nuevo.');
@@ -29,11 +34,7 @@ export const misReportes = async (
 
   return REPORTES
     .filter((reporte) => reporte.autorId === usuarioId)
-    .map((reporte) =>
-      SIMULAR.cambioDeEstado && reporte.id === 'rep-00431'
-        ? { ...reporte, estado: 'en_revision' as const }
-        : reporte,
-    )
+    .map(conSimulacion)
     .sort((a, b) => b.creadoEn.localeCompare(a.creadoEn));
 };
 
@@ -42,7 +43,8 @@ export const reportePorId = async (id: string): Promise<Reporte | null> => {
 
   if (SIMULAR.errorDeRed) throw new ErrorDeRed();
 
-  return REPORTES.find((reporte) => reporte.id === id) ?? null;
+  const encontrado = REPORTES.find((reporte) => reporte.id === id);
+  return encontrado ? conSimulacion(encontrado) : null;
 };
 
 export const reportePorCodigo = async (codigo: string): Promise<Reporte | null> => {
@@ -51,7 +53,8 @@ export const reportePorCodigo = async (codigo: string): Promise<Reporte | null> 
   if (SIMULAR.errorDeRed) throw new ErrorDeRed();
 
   const buscado = codigo.trim().toUpperCase();
-  return REPORTES.find((reporte) => reporte.codigo.toUpperCase() === buscado) ?? null;
+  const encontrado = REPORTES.find((reporte) => reporte.codigo.toUpperCase() === buscado);
+  return encontrado ? conSimulacion(encontrado) : null;
 };
 
 export const historialDeReporte = async (
