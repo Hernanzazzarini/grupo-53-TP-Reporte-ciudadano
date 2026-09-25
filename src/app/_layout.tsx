@@ -1,7 +1,12 @@
 import { Stack } from "expo-router";
 
+import AvisosDeEstado from "../componentes/AvisosDeEstado";
+
 export default function RootLayout(){
   return(
-    <Stack screenOptions={{headerShown:false}}/>
+    <>
+      <AvisosDeEstado />
+      <Stack screenOptions={{headerShown:false}}/>
+    </>
   );
 }

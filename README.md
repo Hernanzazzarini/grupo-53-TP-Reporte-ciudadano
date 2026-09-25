@@ -1,56 +1,69 @@
-# Welcome to your Expo app 👋
+# Reporte Ciudadano
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicación móvil para que los vecinos de Gualeguaychú reporten problemas de la
+vía pública —baches, luminarias, basura, ramas caídas— desde el celular, con
+foto y ubicación, y puedan seguir el estado de su reclamo.
 
-## Get started
+Del otro lado, el personal del Centro de Atención al Vecino gestiona los
+reclamos: cambia estados, asigna cuadrillas y cierra con la foto del arreglo.
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## Contexto académico
 
-2. Start the app
+| | |
+|---|---|
+| **Institución** | Facultad de Ciencias de la Administración · UNER |
+| **Carrera** | Tecnicatura Universitaria en Desarrollo Web |
+| **Materia** | Desarrollo para Móviles |
+| **Período** | 2026 · 2º cuatrimestre |
+| **Trabajo** | Actividad N° 3 — Trabajo Integrador, entrega final |
+| **Consigna** | Resolver el PRD asignado al grupo: **02 — Reporte Ciudadano** |
 
-   ```bash
-   npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+## Integrantes
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Ordenados alfabéticamente por apellido.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+| Apellido y nombre |
+|---|
+| Beltramone, Elisa |
+| Guardia, Claudia |
+| Roman, Gabriel Osvaldo |
+| Romero Degreef, Fabián Agustín |
+| Trentino, Juan Paulo |
+| Zazzarini, Hernán Alberto |
 
-## Get a fresh project
+---
 
-When you're ready, run:
+## Tecnologías
+
+| Qué | Con qué |
+|---|---|
+| Framework | React Native con Expo — **SDK 54** |
+| Lenguaje | TypeScript |
+| Navegación | Expo Router |
+| Estilos | StyleSheet |
+| Entrega | Build de producción con EAS |
+
+---
+
+## Cómo levantar el proyecto
 
 ```bash
-npm run reset-project
+npm install
+npm start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Comprobaciones antes de subir cambios
 
-### Other setup steps
+```bash
+npx expo lint        # reglas de hooks y errores de estilo
+npx tsc --noEmit     # que no haya errores de tipos
+npx expo-doctor      # que las dependencias sean coherentes con el SDK
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+> ⚠️ **No correr `npm audit fix --force`.** Rompe las versiones que Expo fija
+> para el SDK. Los avisos de vulnerabilidades en un proyecto Expo son normales.
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
