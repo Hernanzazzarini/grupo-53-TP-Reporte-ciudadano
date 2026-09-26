@@ -1,10 +1,15 @@
 import Ionicons from '@react-native-vector-icons/ionicons';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { obtenerUsuarioActual } from '../servicios/usuarios';
+
 export default function PantallaInicio() {
   const router = useRouter();
+
+  // Sin sesión iniciada, lo primero que se ve es el login
+  if (!obtenerUsuarioActual()) return <Redirect href="/login" />;
 
   return (
     <SafeAreaView style={estilos.pantalla} edges={['top']}>
