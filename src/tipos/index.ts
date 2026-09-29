@@ -60,3 +60,18 @@ export interface ReporteDatos {
   coordenadas: Coordenadas;
   direccion: string;
 }
+
+export interface Zona {
+  id: string;
+  nombre: string;
+  limite: Coordenadas[];
+  referente: string;
+}
+
+export interface Cuadrilla {
+  id: string;
+  nombre: string;
+  zonaId: string;
+  especialidad: string;
+  activa: boolean;
+}
