@@ -5,6 +5,11 @@ export interface TipoDeReporte {
     color: string;
 }
 
+export interface Coordenadas {
+    latitud: number;
+    longitud: number;
+}
+
 export interface ReporteDatos {
     tipoId: string;
     descripcion: string | null;
@@ -16,8 +21,16 @@ export interface ReporteDatos {
     };
     direccion: string;
 
-
 }
+
+export interface Reporte {
+    id: string;
+    tipoId: string;
+    descripcion: string | null;
+    coordenadas: Coordenadas;
+    direccion: string;
+}
+
 
 
 

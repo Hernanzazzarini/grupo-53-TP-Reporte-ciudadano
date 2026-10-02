@@ -15,12 +15,22 @@ export default function PantallaCatalogo() {
         obtenerTiposDeReporte().then(setCategorias);
     }, []);
     const seleccionarCategoria = (tipoId: string) => {
-        router.push({ pathname: '/crear-reporte'as any, params: { tipoId } });
+        router.push({ pathname: '/crear-reporte' as any, params: { tipoId } });
     };
     return (
         <View style={styles.container}>
             <Text style={styles.titulo}>¿Qué problema queres reportar?</Text>
             <Text style={styles.titulo}>Elegi una categorìa para comenzar</Text>
+
+            <TouchableOpacity
+                style={styles.botonMapa}
+                onPress={() => router.push('/mapa')}
+            >
+                <Ionicons name="map-outline" size={22} color="#FFFFFF" />
+                <Text style={styles.textoBotonMapa}>
+                    Ver mapa de reclamos
+                </Text>
+            </TouchableOpacity>
 
             <FlatList
                 data={categorias}
@@ -42,11 +52,29 @@ export default function PantallaCatalogo() {
     );
 }
 const styles = StyleSheet.create({
-    container: { flex:1,backgroundColor: '#F3F4F6', padding: 16, paddingTop: 50 },
-    titulo: { fontSize:22, fontWeight: 'bold', color: '#1F2937', textAlign: 'center' },
-    subtitulo: { fontSize:14, color: '#1F2937', textAlign: 'center', marginBottom: 20 },
-    grilla: { paddingBottom:20 },
-    card: { 
+    container: { flex: 1, backgroundColor: '#F3F4F6', padding: 16, paddingTop: 50 },
+    titulo: { fontSize: 22, fontWeight: 'bold', color: '#1F2937', textAlign: 'center' },
+    subtitulo: { fontSize: 14, color: '#1F2937', textAlign: 'center', marginBottom: 20 },
+    grilla: { paddingBottom: 20 },
+    botonMapa: {
+        backgroundColor: '#2563EB',
+        borderRadius: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        marginTop: 20,
+        marginBottom: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    textoBotonMapa: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '600',
+        marginLeft: 8,
+    },
+    card: {
         flex: 1,
         backgroundColor: '#FFFFFF',
         margin: 8,
@@ -58,7 +86,7 @@ const styles = StyleSheet.create({
         elevation: 3,
 
     },
-    nombreCategoria: { marginTop: 10, fontSize:16, fontWeight:'600', textAlign: 'center', color: '#374151' },
+    nombreCategoria: { marginTop: 10, fontSize: 16, fontWeight: '600', textAlign: 'center', color: '#374151' },
 });
 
 
