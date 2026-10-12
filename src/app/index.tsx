@@ -8,8 +8,10 @@ import { obtenerUsuarioActual } from '../servicios/usuarios';
 export default function PantallaInicio() {
   const router = useRouter();
 
+  const usuario = obtenerUsuarioActual();
+
   // Sin sesión iniciada, lo primero que se ve es el login
-  if (!obtenerUsuarioActual()) return <Redirect href="/login" />;
+  if (!usuario) return <Redirect href="/login" />;
 
   return (
     <SafeAreaView style={estilos.pantalla} edges={['top']}>
@@ -67,6 +69,23 @@ export default function PantallaInicio() {
           </View>
           <Ionicons name="chevron-forward" size={22} color="#94A3B8" />
         </Pressable>
+
+        {usuario.rol === 'operador' && (
+          <Pressable
+            onPress={() => router.push('/bandeja' as any)}
+            role="button"
+            accessibilityLabel="Bandeja de reclamos"
+            accessibilityHint="Gestioná los reclamos de los vecinos"
+            style={({ pressed }) => [estilos.boton, pressed && estilos.tocado]}
+          >
+            <Ionicons name="briefcase-outline" size={30} color="#2563EB" />
+            <View style={estilos.textos}>
+              <Text style={estilos.texto}>Bandeja de reclamos</Text>
+              <Text style={estilos.ayuda}>Para el personal municipal</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={22} color="#94A3B8" />
+          </Pressable>
+        )}
       </View>
     </SafeAreaView>
   );

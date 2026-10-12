@@ -7,6 +7,11 @@ export interface ConfiguracionUsuario {
     notificacionesEmail: boolean;
   }
   
+  // Agregado para el modulo 6 (panel municipal): sin esto no hay forma de
+  // distinguir vecino de operador. Si module 5 ya lo tiene resuelto de otra
+  // forma, avisar para unificar.
+  export type Rol = "vecino" | "operador";
+
   export interface Usuario {
     id: string;
     nombre: string;
@@ -15,6 +20,7 @@ export interface ConfiguracionUsuario {
     email: string;
     telefono?: string;
     direccion?: string;
+    rol?: Rol;
     configuracion: ConfiguracionUsuario;
   }
   

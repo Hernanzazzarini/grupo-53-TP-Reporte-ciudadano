@@ -8,7 +8,13 @@
     "scheme": "reporteciudadano",
     "userInterfaceStyle": "automatic",
     "android": {
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.CAMERA"
+      ],
+      "package": "com.anonymous.reporteciudadano"
     },
     "web": {
       "output": "static",
