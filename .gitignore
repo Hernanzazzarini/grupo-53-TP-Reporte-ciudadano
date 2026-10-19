@@ -42,3 +42,10 @@ example
 /ios
 /android
 CLAUDE.md
+.claude/
+AGENTS.md
+.cursor/
+.idea/
+
+# cobertura de tests
+coverage/
