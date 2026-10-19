@@ -46,7 +46,6 @@ const reportesMock: Reporte[] = [
 export const obtenerReportesCercanos = async (
     coordenadas: Coordenadas
 ): Promise<Reporte[]> => {
-    // Simulamos una llamada a un backend.
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     return reportesMock;

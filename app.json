@@ -32,6 +32,10 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ], [
+        "expo-location", {
+          "locationWhenInUsePermission": "La app usa tu ubicacion en el mapa"
+        }
       ],
       "@react-native-vector-icons/ionicons",
       "expo-font",
