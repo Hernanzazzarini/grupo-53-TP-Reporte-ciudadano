@@ -75,3 +75,12 @@ export interface Cuadrilla {
   especialidad: string;
   activa: boolean;
 }
+
+export interface Pins {
+  id: string;
+  descripcion: string;
+  coordenadas: {
+    latitude: number;
+    longitude: number;
+  };
+}

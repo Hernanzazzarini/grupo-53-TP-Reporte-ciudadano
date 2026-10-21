@@ -2,10 +2,14 @@ import * as Location from 'expo-location';
 import type { LocationObject } from 'expo-location';
 import type { Coordenadas } from '@/tipos';
 
-export async function captureReadingCoordenadas():Promise<Coordenadas | null>{
+export async function leerUbicacion():Promise<Coordenadas | null>{
     try {
         const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status!=='granted') return null;
+        console.log('Estado del permiso:', status);
+    if (status !== 'granted') {
+            console.log('Permiso de ubicación denegado');
+            return null;
+        }
     const position:LocationObject = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
     })
@@ -13,7 +17,8 @@ export async function captureReadingCoordenadas():Promise<Coordenadas | null>{
         latitud: position.coords.latitude,
         longitud: position.coords.longitude,
     }
-    } catch {
-        return null
+    } catch (error) {
+        console.error('Error al obtener la ubicación:', error);
+        return null;
     }
 }

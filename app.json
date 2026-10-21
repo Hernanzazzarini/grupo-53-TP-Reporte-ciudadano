@@ -31,7 +31,7 @@
         }
       ], [
         "expo-location", {
-          "locationWhenInUsePermission": "La app usa tu ubicacion en el mapa"
+          "locationWhenInUsePermission": "La aplicación necesita acceder a tu ubicación para mostrarte en el mapa."
         }
       ],
       "@react-native-vector-icons/ionicons",

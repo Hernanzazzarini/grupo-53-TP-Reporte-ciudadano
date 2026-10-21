@@ -1,36 +1,182 @@
-import { obtenerTiposDeReporte } from '../servicios/reportes';
-import { Coordenadas, Reporte, TipoDeReporte } from '../tipos/index';
-import { captureReadingCoordenadas } from '../lib/leer-ubicacion'
-import { useEffect } from 'react';
+import { Coordenadas, Reporte, Pins } from '../tipos/index';
+import { leerUbicacion } from '../lib/leer-ubicacion'
+import { obtenerReportes } from '../servicios/mapa'
+import { useEffect, useState } from 'react';
+import { Pressable, View, Text, StyleSheet } from 'react-native';
+import Ionicons from '@react-native-vector-icons/ionicons';
+import { router } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker, Circle } from 'react-native-maps';
 
-import { View, Text, StyleSheet } from 'react-native';
-
 export default function Mapa() {
-    const coordenadas = {
-        latitude: -31.7333,
-        longitude: -60.5297,
-    };
+    const [ubicacion, setUbicacion] = useState<Coordenadas | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [reporte, setReporte] = useState<Reporte[] | null>(null);
+
+    useEffect(() => {
+        async function cargarCoordenadas() {
+            try {
+                const result = await leerUbicacion();
+
+                if (result !== null) {
+                    setUbicacion(result);
+                } else {
+                    setError('No se pudo obtener la ubicación.');
+                }
+            } catch (e) {
+                setError('Ocurrió un error al obtener la ubicación.');
+            }
+        }
+
+        cargarCoordenadas();
+
+        const verReportes = obtenerReportes();
+        setReporte(verReportes);
+    }, []);
+
+    const pins: Pins[] = (reporte ?? []).map(reporte => ({
+        id: reporte.id,
+        descripcion: reporte.descripcion ?? 'Sin descripción',
+        coordenadas: {
+            latitude: reporte.coordenadas.latitud,
+            longitude: reporte.coordenadas.longitud,
+        },
+    }));
+
+    const coordenadasMapa = ubicacion
+        ? {
+            latitude: ubicacion.latitud,
+            longitude: ubicacion.longitud,
+        }
+        : null;
+
     return (
-        <View style={styles.container}>
-            <MapView
-                style={{ flex: 1 }}
-                initialRegion={{
-                    latitude: -31.7333, longitude: -60.5297,
-                    latitudeDelta: 0.05, longitudeDelta: 0.05,
-                }}>
-                <Marker
-                    coordinate={{ latitude: -31.7333, longitude: -60.5297 }}
-                    title="FCAD" description="Facultad de Ciencias de la Administración"
-                />
-                <Circle
-                    center={{ latitude: -31.7333, longitude: -60.5297 }}
-                    radius={500}
-                />
-            </MapView>
-        </View>
+        <SafeAreaView style={estilos.pantalla} edges={['top']}>
+            <View style={estilos.encabezado}>
+                <Pressable
+                    onPress={() => router.replace('/')}
+                    hitSlop={16}
+                    role="button"
+                    accessibilityLabel="Volver al inicio"
+                    accessibilityHint="Regresa a la pantalla inicial"
+                    style={({ pressed }) =>
+                        pressed ? estilos.tocado : undefined
+                    }
+                >
+                    <Ionicons
+                        name="arrow-back"
+                        size={26}
+                        color="#FFFFFF"
+                    />
+                </Pressable>
+
+                <Text style={estilos.titulo}>
+                    Mapa de reclamos
+                </Text>
+
+                <View style={estilos.espaciador} />
+            </View>
+
+            <View style={estilos.contenido}>
+                {error ? (
+                    <View style={estilos.mensaje}>
+                        <Ionicons
+                            name="alert-circle-outline"
+                            size={36}
+                            color="#DC2626"
+                        />
+                        <Text style={estilos.textoMensaje}>
+                            {error}
+                        </Text>
+                    </View>
+                ) : coordenadasMapa === null ? (
+                    <View style={estilos.mensaje}>
+                        <Text style={estilos.textoMensaje}>
+                            Cargando ubicación...
+                        </Text>
+                    </View>
+                ) : (
+                    <MapView
+                        style={estilos.mapa}
+                        initialRegion={{
+                            ...coordenadasMapa,
+                            latitudeDelta: 0.01,
+                            longitudeDelta: 0.01,
+                        }}
+                    >
+                        <Marker
+                            coordinate={coordenadasMapa}
+                            title="Mi ubicación"
+                            description="Mi ubicación actual"
+                        />
+
+                        {pins.map(pin => (
+                            <Marker
+                                key={pin.id}
+                                coordinate={pin.coordenadas}
+                                title="Reclamo"
+                                description={pin.descripcion}
+                            />
+                        ))}
+
+                        <Circle
+                            center={coordenadasMapa}
+                            radius={500}
+                            strokeColor="rgba(37, 99, 235, 0.7)"
+                            fillColor="rgba(37, 99, 235, 0.15)"
+                        />
+                    </MapView>
+                )}
+            </View>
+        </SafeAreaView>
     );
 }
+
+const estilos = StyleSheet.create({
+    pantalla: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+    },
+    encabezado: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#2563EB',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+    },
+    titulo: {
+        color: '#FFFFFF',
+        fontSize: 20,
+        fontWeight: '600',
+    },
+    espaciador: {
+        width: 26,
+    },
+    contenido: {
+        flex: 1,
+    },
+    mapa: {
+        flex: 1,
+    },
+    mensaje: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+        gap: 10,
+    },
+    textoMensaje: {
+        fontSize: 16,
+        color: '#334155',
+        textAlign: 'center',
+    },
+    tocado: {
+        opacity: 0.6,
+    },
+});
+
+
 
 
 // useEffect(() => {
@@ -45,14 +191,3 @@ export default function Mapa() {
 //     })();
 //     return () => suscripcion?.remove(); // ← sin esto el GPS sigue prendido
 // }, [])
-
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    mapa: {
-        width: '100%',
-        height: '100%',
-    },
-});
