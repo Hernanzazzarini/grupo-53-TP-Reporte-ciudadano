@@ -1,8 +1,9 @@
-import { Coordenadas, Reporte, Pins } from '../tipos/index';
+import { Coordenadas, Reporte, Pins, EstadoReporte, TipoProblema } from '../tipos/index';
 import { leerUbicacion } from '../lib/leer-ubicacion'
 import { obtenerReportes } from '../servicios/mapa'
 import { useEffect, useState } from 'react';
 import { Pressable, View, Text, StyleSheet } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +13,8 @@ export default function Mapa() {
     const [ubicacion, setUbicacion] = useState<Coordenadas | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [reporte, setReporte] = useState<Reporte[] | null>(null);
+    const [tipoSeleccionado, setTipoSeleccionado] = useState<TipoProblema | null>(null);
+    const [estadoSeleccionado, setEstadoSeleccionado] = useState<EstadoReporte | null>(null);
 
     useEffect(() => {
         async function cargarCoordenadas() {
@@ -36,12 +39,34 @@ export default function Mapa() {
 
     const pins: Pins[] = (reporte ?? []).map(reporte => ({
         id: reporte.id,
+        tipoId: reporte.tipoId,
         descripcion: reporte.descripcion ?? 'Sin descripción',
         coordenadas: {
             latitude: reporte.coordenadas.latitud,
             longitude: reporte.coordenadas.longitud,
         },
+        estado: reporte.estado,
     }));
+    const coloresPins: Record<EstadoReporte, { color: string; etiqueta: string }
+    > = {
+        recibido: { color: "#2196F3", etiqueta: "Recibido" },
+        en_revision: { color: "#FFC107", etiqueta: "En revisión" },
+        asignado: { color: "#9C27B0", etiqueta: "Asignado" },
+        resuelto: { color: "#4CAF50", etiqueta: "Resuelto" },
+        rechazado: { color: "#F44336", etiqueta: "Rechazado" },
+    };
+
+    const reportesFiltrados = (reporte ?? []).filter(item => {
+        const coincideTipo =
+            tipoSeleccionado === null ||
+            item.tipoId === tipoSeleccionado;
+
+        const coincideEstado =
+            estadoSeleccionado === null ||
+            item.estado === estadoSeleccionado;
+
+        return coincideTipo && coincideEstado;
+    });
 
     const coordenadasMapa = ubicacion
         ? {
@@ -103,30 +128,79 @@ export default function Mapa() {
                             latitudeDelta: 0.01,
                             longitudeDelta: 0.01,
                         }}
+                        showsUserLocation={true}
+                        showsMyLocationButton={true}
                     >
-                        <Marker
-                            coordinate={coordenadasMapa}
-                            title="Mi ubicación"
-                            description="Mi ubicación actual"
-                        />
-
-                        {pins.map(pin => (
+                        {reportesFiltrados.map(item => (
                             <Marker
-                                key={pin.id}
-                                coordinate={pin.coordenadas}
-                                title="Reclamo"
-                                description={pin.descripcion}
+                                key={item.id}
+                                coordinate={{
+                                    latitude: item.coordenadas.latitud,
+                                    longitude: item.coordenadas.longitud,
+                                }}
+                                title={coloresPins[item.estado].etiqueta}
+                                description={item.descripcion ?? 'Sin descripción'}
+                                pinColor={coloresPins[item.estado].color}
                             />
                         ))}
 
-                        <Circle
+
+                        {/* <Circle
                             center={coordenadasMapa}
                             radius={500}
                             strokeColor="rgba(37, 99, 235, 0.7)"
                             fillColor="rgba(37, 99, 235, 0.15)"
-                        />
+                        /> */}
                     </MapView>
                 )}
+                <View style={estilos.filtros}>
+                    <View style={estilos.filtro}>
+                        <Text style={estilos.etiquetaFiltro}>
+                            Tipo de problema
+                        </Text>
+
+                        <Picker
+                            selectedValue={tipoSeleccionado}
+                            onValueChange={(valor) =>
+                                setTipoSeleccionado(valor)
+                            }
+                        >
+                            <Picker.Item
+                                label="Todos los tipos"
+                                value={null}
+                            />
+
+                            <Picker.Item label="Rotura" value="Rotura" />
+                            <Picker.Item label="Accesibilidad" value="Accesibilidad" />
+                            <Picker.Item label="Alumbrado" value="Alumbrado" />
+                            <Picker.Item label="Limpieza" value="Limpieza" />
+                            <Picker.Item label="Tráfico" value="Tráfico" />
+                            <Picker.Item label="Arbolado" value="Arbolado" />
+                            <Picker.Item label="Otro" value="Otro" />
+                        </Picker>
+                    </View>
+
+                    <View style={estilos.filtro}>
+                        <Text style={estilos.etiquetaFiltro}>
+                            Estado del reclamo
+                        </Text>
+
+                        <Picker
+                            selectedValue={estadoSeleccionado}
+                            onValueChange={(valor) =>
+                                setEstadoSeleccionado(valor)
+                            }
+                        >
+                            <Picker.Item label="Todos los estados" value={null} />
+                            <Picker.Item label="Recibido" value="recibido" />
+                            <Picker.Item label="En revisión" value="en_revision" />
+                            <Picker.Item label="Asignado" value="asignado" />
+                            <Picker.Item label="Resuelto" value="resuelto" />
+                            <Picker.Item label="Rechazado" value="rechazado" />
+                        </Picker>
+                    </View>
+
+                </View>
             </View>
         </SafeAreaView>
     );
@@ -173,6 +247,26 @@ const estilos = StyleSheet.create({
     },
     tocado: {
         opacity: 0.6,
+    },
+    filtros: {
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        gap: 8,
+    },
+
+    filtro: {
+        borderWidth: 1,
+        borderColor: '#D1D5DB',
+        borderRadius: 10,
+        paddingHorizontal: 8,
+    },
+
+    etiquetaFiltro: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#374151',
+        marginTop: 8,
     },
 });
 

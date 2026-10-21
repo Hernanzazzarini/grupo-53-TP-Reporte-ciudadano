@@ -21,7 +21,7 @@ export const REPORTES: Reporte[] = [
   {
     id: 'rep-00412',
     codigo: 'GCHU-2026-00412',
-    tipoId: 'tip-bache',
+    tipoId: 'Rotura',
     descripcion: 'Pozo grande en la mano hacia el centro, pasa el agua.',
     audioUrl: null,
     fotos: [
@@ -42,7 +42,7 @@ export const REPORTES: Reporte[] = [
   {
     id: 'rep-00431',
     codigo: 'GCHU-2026-00431',
-    tipoId: 'tip-luz',
+    tipoId: 'Alumbrado',
     descripcion: null,
     audioUrl: NOTA_DE_VOZ,
     fotos: [
@@ -63,7 +63,7 @@ export const REPORTES: Reporte[] = [
   {
     id: 'rep-00398',
     codigo: 'GCHU-2026-00398',
-    tipoId: 'tip-basura',
+    tipoId: 'Limpieza',
     descripcion: 'Montaña de escombros en la esquina, hace tres semanas.',
     audioUrl: null,
     fotos: [
@@ -85,7 +85,7 @@ export const REPORTES: Reporte[] = [
   {
     id: 'rep-00377',
     codigo: 'GCHU-2026-00377',
-    tipoId: 'tip-semaforo',
+    tipoId: 'Tráfico',
     descripcion: 'El semáforo de la esquina titila en amarillo todo el día.',
     audioUrl: null,
     fotos: [
@@ -106,7 +106,7 @@ export const REPORTES: Reporte[] = [
   {
     id: 'rep-local-01',
     codigo: 'PENDIENTE',
-    tipoId: 'tip-vereda',
+    tipoId: 'Accesibilidad',
     descripcion: 'Baldosas levantadas, ya se cayó una señora.',
     audioUrl: null,
     fotos: [
@@ -127,7 +127,7 @@ export const REPORTES: Reporte[] = [
   {
     id: 'rep-00352',
     codigo: 'GCHU-2026-00352',
-    tipoId: 'tip-arbol',
+    tipoId: 'Arbolado',
     descripcion: 'Rama grande apoyada sobre el cable de la luz.',
     audioUrl: null,
     fotos: [

@@ -16,10 +16,19 @@ export type EstadoReporte =
   | "resuelto"
   | "rechazado";
 
+  export type TipoProblema =
+  | "Rotura"
+  | "Accesibilidad"
+  | "Alumbrado"
+  | "Limpieza"
+  | "Tráfico"
+  | "Arbolado"
+  | "Otro";
+
 export interface Reporte {
   id: string;
   codigo: string;
-  tipoId: string;
+  tipoId: TipoProblema;
   descripcion: string | null;
   audioUrl: string | null;
   fotos: Foto[];
@@ -78,9 +87,12 @@ export interface Cuadrilla {
 
 export interface Pins {
   id: string;
+  tipoId: string;
   descripcion: string;
   coordenadas: {
     latitude: number;
     longitude: number;
   };
+  estado: EstadoReporte;
+
 }
