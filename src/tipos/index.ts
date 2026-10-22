@@ -16,19 +16,10 @@ export type EstadoReporte =
   | "resuelto"
   | "rechazado";
 
-  export type TipoProblema =
-  | "Rotura"
-  | "Accesibilidad"
-  | "Alumbrado"
-  | "Limpieza"
-  | "Tráfico"
-  | "Arbolado"
-  | "Otro";
-
 export interface Reporte {
   id: string;
   codigo: string;
-  tipoId: TipoProblema;
+  tipoId: string;
   descripcion: string | null;
   audioUrl: string | null;
   fotos: Foto[];
