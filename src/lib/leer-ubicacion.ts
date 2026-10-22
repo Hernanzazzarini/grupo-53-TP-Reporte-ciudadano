@@ -22,3 +22,36 @@ export async function leerUbicacion(): Promise<Coordenadas | null> {
         return null;
     }
 }
+
+
+export async function obtenerDireccion(
+    coordenadas: Coordenadas
+): Promise<string | null> {
+    try {
+        const resultado = await Location.reverseGeocodeAsync({
+            latitude: coordenadas.latitud,
+            longitude: coordenadas.longitud,
+        });
+
+        if (resultado.length === 0) {
+            return null;
+        }
+
+        const lugar = resultado[0];
+
+        return [
+            lugar.street,
+            lugar.streetNumber,
+            lugar.city,
+            lugar.region,
+
+            lugar.postalCode,
+            lugar.country,
+        ]
+            .filter(Boolean)
+            .join(', ');
+    } catch (error) {
+        console.error('Error al obtener la dirección:', error);
+        return null;
+    }
+}
