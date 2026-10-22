@@ -1,34 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { Coordenadas } from '@/tipos';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, Alert, ScrollView, } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Image, Alert, ScrollView, } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { enviarReporte } from '../servicios/reportes';
 import { leerUbicacion, obtenerDireccion } from '../lib/leer-ubicacion'
 import * as ImagePicker from 'expo-image-picker';
 
-const [coordenadas, setCoordenadas] = useState<Coordenadas>({ latitud: -31.39195, longitud: -58.01706 });
-const [direccion, setDireccion] = useState<string>("Rocamora 1240");
 
-
-useEffect(() => {
-    const obtenerUbicacion = async () => {
-        const nuevaUbicacion = await leerUbicacion();
-
-        if (nuevaUbicacion !== null) {
-            setCoordenadas(nuevaUbicacion);
-
-            const nuevaDireccion =
-                await obtenerDireccion(nuevaUbicacion);
-
-            setDireccion(nuevaDireccion ?? "Dirección no disponible");
-        }
-    };
-
-    obtenerUbicacion();
-}, []);
 
 export default function PantallaCatalogo() {
+    const [coordenadas, setCoordenadas] = useState<Coordenadas>({ latitud: -31.39195, longitud: -58.01706 });
+    const [direccion, setDireccion] = useState<string>("Rocamora 1240");
+
+
+    useEffect(() => {
+        const obtenerUbicacion = async () => {
+            const nuevaUbicacion = await leerUbicacion();
+
+            if (nuevaUbicacion !== null) {
+                setCoordenadas(nuevaUbicacion);
+
+                const nuevaDireccion =
+                    await obtenerDireccion(nuevaUbicacion);
+
+                setDireccion(nuevaDireccion ?? "Dirección no disponible");
+            }
+        };
+
+        obtenerUbicacion();
+    }, []);
+    
     const { tipoId } = useLocalSearchParams<{ tipoId: string }>();
     const router = useRouter();
 
@@ -81,6 +83,19 @@ export default function PantallaCatalogo() {
     };
     return (
         <ScrollView style={styles.container}>
+            <Pressable
+                onPress={() => router.replace('/')}
+                hitSlop={16}
+                accessibilityRole="button"
+                accessibilityLabel="Volver al inicio"
+                style={styles.botonVolver}
+            >
+                <Ionicons
+                    name="arrow-back"
+                    size={28}
+                    color="#0c0e7f"
+                />
+            </Pressable>
             <Text style={styles.titulo} >Nuevo Reporte</Text>
             <Text style={styles.label} >Foto del problema (Obligatoria) </Text>
             {foto ? (
@@ -167,6 +182,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: 30,
         marginBottom: 50,
+    },
+    botonVolver: {
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        marginBottom: 10,
+        zIndex: 10,
     },
 
 
