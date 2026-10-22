@@ -7,7 +7,7 @@ import { Picker } from '@react-native-picker/picker';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Marker, Circle } from 'react-native-maps';
+import MapView, { Marker } from 'react-native-maps';
 
 export default function Mapa() {
     const [ubicacion, setUbicacion] = useState<Coordenadas | null>(null);
@@ -15,7 +15,6 @@ export default function Mapa() {
     const [reporte, setReporte] = useState<Reporte[] | null>(null);
     const [tipoSeleccionado, setTipoSeleccionado] = useState<string | null>(null);
     const [estadoSeleccionado, setEstadoSeleccionado] = useState<EstadoReporte | null>(null);
-    const [puntoSeleccionado, setPuntoSeleccionado] = useState<Coordenadas | null>(null);
 
     useEffect(() => {
         async function cargarCoordenadas() {
@@ -76,13 +75,6 @@ export default function Mapa() {
         return coincideTipo && coincideEstado;
     });
 
-    const coordenadasMapa = ubicacion
-        ? {
-            latitude: ubicacion.latitud,
-            longitude: ubicacion.longitud,
-        }
-        : null;
-
     return (
         <SafeAreaView style={estilos.pantalla} edges={['top']}>
             <View style={estilos.encabezado}>
@@ -114,10 +106,10 @@ export default function Mapa() {
                 {<MapView
                     style={estilos.mapa}
                     initialRegion={{
-                        latitude: ubicacion?.latitud ?? -34.6037,
-                        longitude: ubicacion?.longitud ?? -58.3816,
-                        latitudeDelta: 0.01,
-                        longitudeDelta: 0.01,
+                        latitude: ubicacion?.latitud ?? -33.0046,
+                        longitude: ubicacion?.longitud ?? -58.5249,
+                        latitudeDelta: 0.03,
+                        longitudeDelta: 0.03,
                     }}
                     showsUserLocation={ubicacion !== null}
                     showsMyLocationButton={ubicacion !== null}
@@ -135,13 +127,6 @@ export default function Mapa() {
                         />
                     ))}
 
-
-                    {/* <Circle
-                            center={coordenadasMapa}
-                            radius={500}
-                            strokeColor="rgba(37, 99, 235, 0.7)"
-                            fillColor="rgba(37, 99, 235, 0.15)"
-                        /> */}
                 </MapView>
                 }
                 <View style={estilos.filtros}>
@@ -261,18 +246,3 @@ const estilos = StyleSheet.create({
     },
 });
 
-
-
-
-// useEffect(() => {
-//     let suscripcion: Location.LocationSubscription;
-//     (async () => {
-//         const { status } = await Location.requestForegroundPermissionsAsync();
-//         if (status !== 'granted') return;
-//         suscripcion = await Location.watchPositionAsync(
-//             { accuracy: Location.Accuracy.High, distanceInterval: 10 }, // metros
-//             (posicion) => setCoords(posicion.coords),
-//         );
-//     })();
-//     return () => suscripcion?.remove(); // ← sin esto el GPS sigue prendido
-// }, [])
