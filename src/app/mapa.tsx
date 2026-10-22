@@ -1,4 +1,4 @@
-import { Coordenadas, Reporte, Pins, EstadoReporte, TipoProblema } from '../tipos/index';
+import { Coordenadas, Reporte, Pins, EstadoReporte } from '../tipos/index';
 import { leerUbicacion } from '../lib/leer-ubicacion'
 import { obtenerReportes } from '../servicios/mapa'
 import { useEffect, useState } from 'react';
@@ -13,8 +13,9 @@ export default function Mapa() {
     const [ubicacion, setUbicacion] = useState<Coordenadas | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [reporte, setReporte] = useState<Reporte[] | null>(null);
-    const [tipoSeleccionado, setTipoSeleccionado] = useState<TipoProblema | null>(null);
+    const [tipoSeleccionado, setTipoSeleccionado] = useState<string | null>(null);
     const [estadoSeleccionado, setEstadoSeleccionado] = useState<EstadoReporte | null>(null);
+    const [puntoSeleccionado, setPuntoSeleccionado] = useState<Coordenadas | null>(null);
 
     useEffect(() => {
         async function cargarCoordenadas() {
@@ -33,8 +34,15 @@ export default function Mapa() {
 
         cargarCoordenadas();
 
-        const verReportes = obtenerReportes();
-        setReporte(verReportes);
+        async function cargarReportes() {
+            try {
+                const reportes = await obtenerReportes();
+                setReporte(reportes);
+            } catch (e) {
+                setError('No se pudieron cargar los reportes.');
+            }
+        }
+        cargarReportes();
     }, []);
 
     const pins: Pins[] = (reporte ?? []).map(reporte => ({
@@ -103,56 +111,39 @@ export default function Mapa() {
             </View>
 
             <View style={estilos.contenido}>
-                {error ? (
-                    <View style={estilos.mensaje}>
-                        <Ionicons
-                            name="alert-circle-outline"
-                            size={36}
-                            color="#DC2626"
+                {<MapView
+                    style={estilos.mapa}
+                    initialRegion={{
+                        latitude: ubicacion?.latitud ?? -34.6037,
+                        longitude: ubicacion?.longitud ?? -58.3816,
+                        latitudeDelta: 0.01,
+                        longitudeDelta: 0.01,
+                    }}
+                    showsUserLocation={ubicacion !== null}
+                    showsMyLocationButton={ubicacion !== null}
+                >
+                    {reportesFiltrados.map(item => (
+                        <Marker
+                            key={item.id}
+                            coordinate={{
+                                latitude: item.coordenadas.latitud,
+                                longitude: item.coordenadas.longitud,
+                            }}
+                            title={coloresPins[item.estado].etiqueta}
+                            description={item.descripcion ?? 'Sin descripción'}
+                            pinColor={coloresPins[item.estado].color}
                         />
-                        <Text style={estilos.textoMensaje}>
-                            {error}
-                        </Text>
-                    </View>
-                ) : coordenadasMapa === null ? (
-                    <View style={estilos.mensaje}>
-                        <Text style={estilos.textoMensaje}>
-                            Cargando ubicación...
-                        </Text>
-                    </View>
-                ) : (
-                    <MapView
-                        style={estilos.mapa}
-                        initialRegion={{
-                            ...coordenadasMapa,
-                            latitudeDelta: 0.01,
-                            longitudeDelta: 0.01,
-                        }}
-                        showsUserLocation={true}
-                        showsMyLocationButton={true}
-                    >
-                        {reportesFiltrados.map(item => (
-                            <Marker
-                                key={item.id}
-                                coordinate={{
-                                    latitude: item.coordenadas.latitud,
-                                    longitude: item.coordenadas.longitud,
-                                }}
-                                title={coloresPins[item.estado].etiqueta}
-                                description={item.descripcion ?? 'Sin descripción'}
-                                pinColor={coloresPins[item.estado].color}
-                            />
-                        ))}
+                    ))}
 
 
-                        {/* <Circle
+                    {/* <Circle
                             center={coordenadasMapa}
                             radius={500}
                             strokeColor="rgba(37, 99, 235, 0.7)"
                             fillColor="rgba(37, 99, 235, 0.15)"
                         /> */}
-                    </MapView>
-                )}
+                </MapView>
+                }
                 <View style={estilos.filtros}>
                     <View style={estilos.filtro}>
                         <Text style={estilos.etiquetaFiltro}>
@@ -170,13 +161,13 @@ export default function Mapa() {
                                 value={null}
                             />
 
-                            <Picker.Item label="Rotura" value="Rotura" />
-                            <Picker.Item label="Accesibilidad" value="Accesibilidad" />
-                            <Picker.Item label="Alumbrado" value="Alumbrado" />
-                            <Picker.Item label="Limpieza" value="Limpieza" />
-                            <Picker.Item label="Tráfico" value="Tráfico" />
-                            <Picker.Item label="Arbolado" value="Arbolado" />
-                            <Picker.Item label="Otro" value="Otro" />
+                            <Picker.Item label="Rotura" value="tip-bache" />
+                            <Picker.Item label="Vereda" value="tip-vereda" />
+                            <Picker.Item label="Luz" value="tip-luz" />
+                            <Picker.Item label="Limpieza" value="tip-basura" />
+                            <Picker.Item label="Semaforo" value="tip-semaforo" />
+                            <Picker.Item label="Arbolado" value="tip-arbol" />
+                            <Picker.Item label="Otro" value="tip-otro" />
                         </Picker>
                     </View>
 

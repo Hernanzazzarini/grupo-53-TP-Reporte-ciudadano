@@ -1,5 +1,5 @@
 import { Asset } from 'expo-asset';
-import { CambioDeEstado, Reporte } from '../tipos/index';
+import { CambioDeEstado, Reporte, TipoDeReporte } from '../tipos/index';
 
 export const USUARIO_ACTUAL = 'usr-084';
 

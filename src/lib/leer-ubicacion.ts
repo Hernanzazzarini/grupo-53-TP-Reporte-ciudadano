@@ -9,7 +9,7 @@ export async function leerUbicacion(): Promise<Coordenadas | null> {
         if (status !== 'granted') {
             return null;
         }
-        const enabled = await Location.hasServicesEnabledAsync();
+        // const enabled = await Location.hasServicesEnabledAsync();
         const position: LocationObject = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.Balanced,
         })
