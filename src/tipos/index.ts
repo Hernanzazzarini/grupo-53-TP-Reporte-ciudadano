@@ -75,3 +75,15 @@ export interface Cuadrilla {
   especialidad: string;
   activa: boolean;
 }
+
+export interface Pins {
+  id: string;
+  tipoId: string;
+  descripcion: string;
+  coordenadas: {
+    latitude: number;
+    longitude: number;
+  };
+  estado: EstadoReporte;
+
+}

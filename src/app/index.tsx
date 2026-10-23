@@ -70,6 +70,21 @@ export default function PantallaInicio() {
           <Ionicons name="chevron-forward" size={22} color="#94A3B8" />
         </Pressable>
 
+        <Pressable
+          onPress={() => router.push('/mapa' as any)}
+          role="button"
+          accessibilityLabel="Mapa"
+          accessibilityHint="Accede al mapa de reclamos"
+          style={({ pressed }) => [estilos.boton, pressed && estilos.tocado]}
+        >
+          <Ionicons name="map-outline" size={30} color="#2563EB" />
+          <View style={estilos.textos}>
+            <Text style={estilos.texto}>Mapa</Text>
+            <Text style={estilos.ayuda}>Accede al mapa de reclamos</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color="#94A3B8" />
+        </Pressable>
+
         {usuario.rol === 'operador' && (
           <Pressable
             onPress={() => router.push('/bandeja' as any)}
