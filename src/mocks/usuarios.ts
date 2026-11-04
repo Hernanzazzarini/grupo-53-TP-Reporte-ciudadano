@@ -14,6 +14,7 @@ export const usuariosMock: UsuarioConPassword[] = [
       direccion: "25 de Mayo 123",
       password: "12345678",
       rol: "vecino",
+      zonaId: null,
       configuracion: {
         notificacionesPush: true,
         notificacionesEmail: false,
@@ -29,6 +30,7 @@ export const usuariosMock: UsuarioConPassword[] = [
       direccion: "Centro de Atención al Vecino",
       password: "12345678",
       rol: "operador",
+      zonaId: "zon-norte",
       configuracion: {
         notificacionesPush: true,
         notificacionesEmail: false,

@@ -21,6 +21,8 @@ export interface ConfiguracionUsuario {
     telefono?: string;
     direccion?: string;
     rol?: Rol;
+    // Solo tiene valor para operadores; un vecino siempre es null.
+    zonaId?: string | null;
     configuracion: ConfiguracionUsuario;
   }
   
