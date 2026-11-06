@@ -118,9 +118,24 @@ export default function PantallaGestionarReclamo() {
     }
   };
 
-  const manejarFotoArreglo = async () => {
+  const subirFotoArreglo = async (uri: string) => {
     if (!id) return;
 
+    setProcesando(true);
+    try {
+      await agregarFotoArreglo(id, uri);
+      await cargar();
+    } catch (error) {
+      Alert.alert(
+        'No se pudo subir la foto',
+        error instanceof Error ? error.message : 'Intentá de nuevo.',
+      );
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const sacarFotoArreglo = async () => {
     const permiso = await ImagePicker.requestCameraPermissionsAsync();
     if (!permiso.granted) {
       Alert.alert('Permiso requerido', 'Se necesita acceso a la cámara para sacar la foto.');
@@ -131,20 +146,21 @@ export default function PantallaGestionarReclamo() {
       allowsEditing: false,
       quality: 0.7,
     });
-    if (resultado.canceled) return;
+    if (!resultado.canceled) await subirFotoArreglo(resultado.assets[0].uri);
+  };
 
-    setProcesando(true);
-    try {
-      await agregarFotoArreglo(id, resultado.assets[0].uri);
-      await cargar();
-    } catch (error) {
-      Alert.alert(
-        'No se pudo subir la foto',
-        error instanceof Error ? error.message : 'Intentá de nuevo.',
-      );
-    } finally {
-      setProcesando(false);
+  const elegirFotoArregloDeGaleria = async () => {
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) {
+      Alert.alert('Permiso requerido', 'Se necesita acceso a la galería para elegir la foto.');
+      return;
     }
+
+    const resultado = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: false,
+      quality: 0.7,
+    });
+    if (!resultado.canceled) await subirFotoArreglo(resultado.assets[0].uri);
   };
 
   return (
@@ -285,19 +301,30 @@ export default function PantallaGestionarReclamo() {
                 transition={200}
               />
             )}
-            <Pressable
-              onPress={manejarFotoArreglo}
-              disabled={procesando}
-              role="button"
-              accessibilityLabel="Sacar foto del arreglo"
-              style={({ pressed }) => [estilos.boton, pressed && estilos.tocado]}
-            >
-              <Text style={estilos.textoBoton}>
-                {pantalla.reporte.fotos.some((f) => f.momento === 'arreglo')
-                  ? 'Reemplazar foto'
-                  : 'Sacar foto'}
-              </Text>
-            </Pressable>
+            <View style={estilos.filaBotonesFoto}>
+              <Pressable
+                onPress={sacarFotoArreglo}
+                disabled={procesando}
+                role="button"
+                accessibilityLabel="Sacar foto del arreglo"
+                style={({ pressed }) => [estilos.boton, estilos.botonMitad, pressed && estilos.tocado]}
+              >
+                <Text style={estilos.textoBoton}>
+                  {pantalla.reporte.fotos.some((f) => f.momento === 'arreglo')
+                    ? 'Tomar otra'
+                    : 'Sacar foto'}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={elegirFotoArregloDeGaleria}
+                disabled={procesando}
+                role="button"
+                accessibilityLabel="Elegir foto del arreglo de la galería"
+                style={({ pressed }) => [estilos.boton, estilos.botonMitad, pressed && estilos.tocado]}
+              >
+                <Text style={estilos.textoBoton}>Elegir de galería</Text>
+              </Pressable>
+            </View>
           </View>
 
           <View style={estilos.bloque}>
@@ -380,6 +407,8 @@ const estilos = StyleSheet.create({
   },
   textoBotonEstado: { fontSize: 14, fontWeight: '700' },
   foto: { width: '100%', height: 180, borderRadius: 10, backgroundColor: '#E2E8F0' },
+  filaBotonesFoto: { flexDirection: 'row', gap: 10 },
+  botonMitad: { flex: 1, paddingHorizontal: 12 },
   boton: {
     backgroundColor: '#2563EB',
     paddingHorizontal: 24,

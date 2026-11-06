@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { mensajeDeError } from '../api/errores';
 import { TarjetaReporte } from '../componentes/TarjetaReporte';
 import {
   avisosActivos,
@@ -51,13 +52,7 @@ export default function PantallaMisReportes() {
       setCategorias(tipos);
       setPantalla({ fase: 'listo', reportes });
     } catch (error) {
-      setPantalla({
-        fase: 'error',
-        mensaje:
-          error instanceof Error
-            ? error.message
-            : 'Algo salió mal. Intentá de nuevo.',
-      });
+      setPantalla({ fase: 'error', mensaje: mensajeDeError(error) });
     }
   }, []);
 

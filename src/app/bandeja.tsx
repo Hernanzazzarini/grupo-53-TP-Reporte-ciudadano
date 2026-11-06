@@ -19,6 +19,7 @@ import { obtenerTiposDeReporte } from '../servicios/reportes';
 import { obtenerUsuarioActual } from '../servicios/usuarios';
 import { Reporte, TipoDeReporte, Zona } from '../tipos';
 import { COLORES_ESTADO, ETIQUETAS_ESTADO, ORDEN_ESTADOS } from '../utilidades/estados';
+import { OPERADOR_VE_SOLO_SU_ZONA } from '../utilidades/reglasOperador';
 
 type EstadoPantalla =
   | { fase: 'cargando' }
@@ -29,6 +30,11 @@ const GRIS = '#475569';
 
 export default function PantallaBandeja() {
   const router = useRouter();
+
+  // obtenerUsuarioActual() no es un hook: se puede llamar acá sin problema.
+  // Lo que no puede ir antes de los hooks de abajo es el redirect por rol.
+  const usuario = obtenerUsuarioActual();
+  const zonaForzada = OPERADOR_VE_SOLO_SU_ZONA ? usuario?.zonaId ?? undefined : undefined;
 
   const [pantalla, setPantalla] = useState<EstadoPantalla>({ fase: 'cargando' });
   const [categorias, setCategorias] = useState<TipoDeReporte[]>([]);
@@ -44,7 +50,10 @@ export default function PantallaBandeja() {
     const busqueda = ++ultimaBusqueda.current;
     setBuscando(true);
     try {
-      const reportes = await bandeja(filtros);
+      const reportes = await bandeja({
+        ...filtros,
+        zonaId: zonaForzada ?? filtros.zonaId,
+      });
       if (busqueda === ultimaBusqueda.current) setPantalla({ fase: 'listo', reportes });
     } catch (error) {
       if (busqueda !== ultimaBusqueda.current) return;
@@ -56,7 +65,7 @@ export default function PantallaBandeja() {
     } finally {
       if (busqueda === ultimaBusqueda.current) setBuscando(false);
     }
-  }, [filtros]);
+  }, [filtros, zonaForzada]);
 
   useEffect(() => {
     Promise.all([obtenerTiposDeReporte(), listarZonas()])
@@ -79,7 +88,6 @@ export default function PantallaBandeja() {
     setRecargando(false);
   }, [cargar]);
 
-  const usuario = obtenerUsuarioActual();
   if (!usuario) return <Redirect href="/login" />;
   if (usuario.rol !== 'operador') return <Redirect href="/" />;
 
@@ -117,7 +125,16 @@ export default function PantallaBandeja() {
           <Ionicons name="arrow-back" size={26} color="#1F2937" />
         </Pressable>
         <Text style={estilos.titulo}>Bandeja de reclamos</Text>
-        <View style={estilos.espaciador} />
+        <Pressable
+          onPress={() => router.push('/cuadrillas' as any)}
+          hitSlop={16}
+          role="button"
+          accessibilityLabel="Ver cuadrillas"
+          accessibilityHint="Lista de cuadrillas y a qué zona pertenecen"
+          style={({ pressed }) => pressed && estilos.tocado}
+        >
+          <Ionicons name="people-outline" size={26} color="#2563EB" />
+        </Pressable>
       </View>
 
       <View style={estilos.filtros}>
@@ -158,21 +175,32 @@ export default function PantallaBandeja() {
         </FilaDeFiltros>
 
         <FilaDeFiltros titulo="Zona">
-          <Chip
-            texto="Todas"
-            activo={!filtros.zonaId}
-            color={GRIS}
-            alTocar={() => cambiarFiltro('zonaId', undefined)}
-          />
-          {zonas.map((zona) => (
+          {zonaForzada ? (
             <Chip
-              key={zona.id}
-              texto={zona.nombre}
-              activo={filtros.zonaId === zona.id}
+              texto={zonas.find((z) => z.id === zonaForzada)?.nombre ?? 'Tu zona'}
+              activo
               color="#1E40AF"
-              alTocar={() => cambiarFiltro('zonaId', zona.id)}
+              alTocar={() => {}}
             />
-          ))}
+          ) : (
+            <>
+              <Chip
+                texto="Todas"
+                activo={!filtros.zonaId}
+                color={GRIS}
+                alTocar={() => cambiarFiltro('zonaId', undefined)}
+              />
+              {zonas.map((zona) => (
+                <Chip
+                  key={zona.id}
+                  texto={zona.nombre}
+                  activo={filtros.zonaId === zona.id}
+                  color="#1E40AF"
+                  alTocar={() => cambiarFiltro('zonaId', zona.id)}
+                />
+              ))}
+            </>
+          )}
         </FilaDeFiltros>
       </View>
 
