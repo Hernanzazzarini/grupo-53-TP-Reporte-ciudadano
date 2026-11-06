@@ -7,6 +7,7 @@ import {
   escucharToquesDeNotificacion,
   permisoConcedido,
   prepararCanal,
+  revisarAdhesiones,
   revisarCambiosDeEstado,
 } from '../servicios/notificaciones';
 
@@ -17,7 +18,10 @@ export default function AvisosDeEstado() {
     if (!(await permisoConcedido())) return;
 
     const reportes = await misReportes().catch(() => null);
-    if (reportes) await revisarCambiosDeEstado(reportes);
+    if (!reportes) return;
+
+    await revisarCambiosDeEstado(reportes);
+    await revisarAdhesiones(reportes);
   }, []);
 
   useEffect(() => {

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { mensajeDeError } from '../api/errores';
 import { reportePorCodigo } from '../servicios/seguimiento';
 import { Reporte } from '../tipos';
 import { ETIQUETAS_ESTADO } from '../utilidades/estados';
@@ -45,7 +46,7 @@ export default function PantallaVentanilla() {
     } catch (error) {
       setFase({
         tipo: 'error',
-        mensaje: error instanceof Error ? error.message : 'No pudimos buscar el reclamo.',
+        mensaje: mensajeDeError(error, 'No pudimos buscar el reclamo.'),
       });
     }
   };

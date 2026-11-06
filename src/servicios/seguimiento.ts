@@ -1,21 +1,13 @@
+import { cliente } from '../api/cliente';
+import { ErrorDeApi } from '../api/errores';
 import { CambioDeEstado, Reporte } from '../tipos';
-import { CAMBIOS_DE_ESTADO, REPORTES, USUARIO_ACTUAL } from '../mocks/reportes';
+import { RespuestaLista, RespuestaUno } from '../tipos/api';
 
-const DEMORA_MS = 600;
-const esperar = (ms: number) => new Promise((resolver) => setTimeout(resolver, ms));
-
-// Esto es para poder simular a mano los casos que provocaría la API, que todavía
-// no existe: una lista vacía, una caída de red, y un cambio de estado del mock.
 export const SIMULAR = {
   listaVacia: false,
   errorDeRed: false,
   cambioDeEstado: false,
 };
-
-const conSimulacion = (reporte: Reporte): Reporte =>
-  SIMULAR.cambioDeEstado && reporte.id === 'rep-00431'
-    ? { ...reporte, estado: 'en_revision' as const }
-    : reporte;
 
 export class ErrorDeRed extends Error {
   constructor() {
@@ -24,47 +16,57 @@ export class ErrorDeRed extends Error {
   }
 }
 
-export const misReportes = async (
-  usuarioId: string = USUARIO_ACTUAL,
-): Promise<Reporte[]> => {
-  await esperar(DEMORA_MS);
+const MAXIMO_POR_PAGINA = 100;
 
-  if (SIMULAR.errorDeRed) throw new ErrorDeRed();
-  if (SIMULAR.listaVacia) return [];
+const esNoEncontrado = (error: unknown): boolean =>
+  error instanceof ErrorDeApi &&
+  (error.codigo === 'REPORTE_NO_ENCONTRADO' || error.codigo === 'VALIDACION_FALLIDA');
 
-  return REPORTES
-    .filter((reporte) => reporte.autorId === usuarioId)
-    .map(conSimulacion)
-    .sort((a, b) => b.creadoEn.localeCompare(a.creadoEn));
+export const misReportes = async (): Promise<Reporte[]> => {
+  const respuesta = await cliente.get<RespuestaLista<Reporte>>('/yo/reportes', {
+    params: { porPagina: MAXIMO_POR_PAGINA },
+  });
+  return respuesta.data.datos;
 };
 
 export const reportePorId = async (id: string): Promise<Reporte | null> => {
-  await esperar(DEMORA_MS);
-
-  if (SIMULAR.errorDeRed) throw new ErrorDeRed();
-
-  const encontrado = REPORTES.find((reporte) => reporte.id === id);
-  return encontrado ? conSimulacion(encontrado) : null;
+  try {
+    const respuesta = await cliente.get<RespuestaUno<Reporte>>(
+      `/reportes/${encodeURIComponent(id)}`,
+    );
+    return respuesta.data.datos;
+  } catch (error) {
+    if (esNoEncontrado(error)) return null;
+    throw error;
+  }
 };
 
 export const reportePorCodigo = async (codigo: string): Promise<Reporte | null> => {
-  await esperar(DEMORA_MS);
-
-  if (SIMULAR.errorDeRed) throw new ErrorDeRed();
-
   const buscado = codigo.trim().toUpperCase();
-  const encontrado = REPORTES.find((reporte) => reporte.codigo.toUpperCase() === buscado);
-  return encontrado ? conSimulacion(encontrado) : null;
+  if (buscado.length === 0) return null;
+
+  try {
+    const respuesta = await cliente.get<RespuestaUno<Reporte>>(
+      `/reportes/codigo/${encodeURIComponent(buscado)}`,
+    );
+    return respuesta.data.datos;
+  } catch (error) {
+    if (esNoEncontrado(error)) return null;
+    throw error;
+  }
 };
 
 export const historialDeReporte = async (
   reporteId: string,
 ): Promise<CambioDeEstado[]> => {
-  await esperar(DEMORA_MS);
-
-  if (SIMULAR.errorDeRed) throw new ErrorDeRed();
-
-  return CAMBIOS_DE_ESTADO
-    .filter((cambio) => cambio.reporteId === reporteId)
-    .sort((a, b) => a.fechaHora.localeCompare(b.fechaHora));
+  try {
+    const respuesta = await cliente.get<RespuestaLista<CambioDeEstado>>(
+      `/reportes/${encodeURIComponent(reporteId)}/cambios`,
+      { params: { porPagina: MAXIMO_POR_PAGINA } },
+    );
+    return respuesta.data.datos;
+  } catch (error) {
+    if (esNoEncontrado(error)) return [];
+    throw error;
+  }
 };
