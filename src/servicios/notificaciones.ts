@@ -5,6 +5,7 @@ import { EstadoReporte, Reporte } from '../tipos';
 import { ETIQUETAS_ESTADO } from '../utilidades/estados';
 
 const CLAVE_ESTADOS_VISTOS = 'seguimiento.estadosVistos';
+const CLAVE_ADHESIONES_VISTAS = 'seguimiento.adhesionesVistas';
 const CLAVE_AVISOS_ACTIVOS = 'seguimiento.avisosActivos';
 const CLAVE_YA_OFRECIMOS = 'seguimiento.yaOfrecimosAvisos';
 
@@ -62,21 +63,21 @@ export const definirAvisosActivos = async (activos: boolean): Promise<void> => {
   await Storage.setItem(CLAVE_AVISOS_ACTIVOS, String(activos));
 };
 
-type EstadosVistos = Record<string, EstadoReporte>;
+type Vistos<T> = Record<string, T>;
 
-const leerEstadosVistos = async (): Promise<EstadosVistos> => {
-  const crudo = await Storage.getItem(CLAVE_ESTADOS_VISTOS);
+const leerVistos = async <T>(clave: string): Promise<Vistos<T>> => {
+  const crudo = await Storage.getItem(clave);
   if (!crudo) return {};
 
   try {
-    return JSON.parse(crudo) as EstadosVistos;
+    return JSON.parse(crudo) as Vistos<T>;
   } catch {
     return {};
   }
 };
 
-const guardarEstadosVistos = async (vistos: EstadosVistos): Promise<void> => {
-  await Storage.setItem(CLAVE_ESTADOS_VISTOS, JSON.stringify(vistos));
+const guardarVistos = async <T>(clave: string, vistos: Vistos<T>): Promise<void> => {
+  await Storage.setItem(clave, JSON.stringify(vistos));
 };
 
 export const revisarCambiosDeEstado = async (
@@ -84,8 +85,8 @@ export const revisarCambiosDeEstado = async (
 ): Promise<number> => {
   if (!(await avisosActivos())) return 0;
 
-  const vistos = await leerEstadosVistos();
-  const nuevosVistos: EstadosVistos = { ...vistos };
+  const vistos = await leerVistos<EstadoReporte>(CLAVE_ESTADOS_VISTOS);
+  const nuevosVistos: Vistos<EstadoReporte> = { ...vistos };
   let avisados = 0;
 
   for (const reporte of reportes) {
@@ -103,7 +104,28 @@ export const revisarCambiosDeEstado = async (
     }
   }
 
-  await guardarEstadosVistos(nuevosVistos);
+  await guardarVistos(CLAVE_ESTADOS_VISTOS, nuevosVistos);
+  return avisados;
+};
+
+export const revisarAdhesiones = async (reportes: Reporte[]): Promise<number> => {
+  if (!(await avisosActivos())) return 0;
+
+  const vistas = await leerVistos<number>(CLAVE_ADHESIONES_VISTAS);
+  const nuevasVistas: Vistos<number> = { ...vistas };
+  let avisados = 0;
+
+  for (const reporte of reportes) {
+    const anteriores = vistas[reporte.id];
+    nuevasVistas[reporte.id] = reporte.adhesiones;
+
+    if (anteriores !== undefined && reporte.adhesiones > anteriores) {
+      await avisarAdhesion(reporte, reporte.adhesiones - anteriores);
+      avisados += 1;
+    }
+  }
+
+  await guardarVistos(CLAVE_ADHESIONES_VISTAS, nuevasVistas);
   return avisados;
 };
 
@@ -125,13 +147,15 @@ export const avisarCambioDeEstado = async (reporte: Reporte): Promise<void> => {
   });
 };
 
-export const avisarAdhesion = async (reporte: Reporte): Promise<void> => {
+export const avisarAdhesion = async (reporte: Reporte, cantidad: number = 1): Promise<void> => {
   if (!(await avisosActivos())) return;
+
+  const quienes = cantidad === 1 ? 'Un vecino se sumó' : `${cantidad} vecinos se sumaron`;
 
   await Notifications.scheduleNotificationAsync({
     content: {
       title: reporte.codigo,
-      body: `Un vecino se sumó a tu reclamo de ${reporte.direccion}.`,
+      body: `${quienes} a tu reclamo de ${reporte.direccion}.`,
       data: { reporteId: reporte.id },
     },
     trigger: { channelId: CANAL },

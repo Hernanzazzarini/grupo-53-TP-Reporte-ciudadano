@@ -14,6 +14,7 @@ import {
 import QRCode from 'react-native-qrcode-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { mensajeDeError } from '../api/errores';
 import { LineaDeTiempo } from '../componentes/LineaDeTiempo';
 import { ReproductorDeAudio } from '../componentes/ReproductorDeAudio';
 import { obtenerTiposDeReporte } from '../servicios/reportes';
@@ -59,11 +60,7 @@ export default function PantallaDetalleReporte() {
 
       setPantalla({ fase: 'listo', reporte, historial });
     } catch (error) {
-      setPantalla({
-        fase: 'error',
-        mensaje:
-          error instanceof Error ? error.message : 'Algo salió mal. Intentá de nuevo.',
-      });
+      setPantalla({ fase: 'error', mensaje: mensajeDeError(error) });
     }
   }, [id]);
 
