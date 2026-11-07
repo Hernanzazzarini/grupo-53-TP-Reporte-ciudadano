@@ -10,11 +10,13 @@ import {
   revisarAdhesiones,
   revisarCambiosDeEstado,
 } from '../servicios/notificaciones';
+import { obtenerUsuarioActual } from '../servicios/usuarios';
 
 export default function AvisosDeEstado() {
   const router = useRouter();
 
   const revisar = useCallback(async () => {
+    if (!obtenerUsuarioActual()) return;
     if (!(await permisoConcedido())) return;
 
     const reportes = await misReportes().catch(() => null);
