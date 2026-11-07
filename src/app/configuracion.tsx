@@ -6,28 +6,27 @@ import {
   cerrarSesion,
   obtenerUsuarioActual,
 } from "../servicios/usuarios";
-import { ConfiguracionUsuario } from "../tipos/usuario";
 
 export default function PantallaConfiguracion() {
   const usuario = obtenerUsuarioActual();
-  const [config, setConfig] = useState<ConfiguracionUsuario | undefined>(
-    usuario?.configuracion
-  );
+  // Copia local del interruptor para mostrar el cambio al instante
+  const [avisos, setAvisos] = useState(usuario?.avisosActivos ?? true);
 
-  if (!usuario || !config) return <Redirect href="/login" />;
+  if (!usuario) return <Redirect href="/login" />;
 
-  // Cambia una opción y la guarda en el servicio
-  const cambiar = async (clave: keyof ConfiguracionUsuario, valor: boolean) => {
-    const nueva = { ...config, [clave]: valor };
-    setConfig(nueva); // se ve el cambio al instante
+  // Actualización OPTIMISTA: cambia en pantalla y después guarda (PATCH /yo).
+  // Si falla, vuelve al valor anterior.
+  const cambiarAvisos = async (valor: boolean) => {
+    setAvisos(valor);
     try {
-      await actualizarConfiguracion(nueva);
+      await actualizarConfiguracion(valor);
     } catch {
-      setConfig(config); // si falla, vuelve atrás
+      setAvisos(!valor);
       Alert.alert("Error", "No se pudo guardar la configuración");
     }
   };
 
+  // Pide confirmación antes de cerrar sesión
   const confirmarCierre = () => {
     Alert.alert("Cerrar sesión", "¿Querés salir de tu cuenta?", [
       { text: "Cancelar", style: "cancel" },
@@ -35,7 +34,7 @@ export default function PantallaConfiguracion() {
         text: "Salir",
         style: "destructive",
         onPress: async () => {
-          await cerrarSesion();
+          await cerrarSesion(); // borra el token del celular
           router.replace("/login");
         },
       },
@@ -45,21 +44,11 @@ export default function PantallaConfiguracion() {
   return (
     <View style={estilos.contenedor}>
       <Text style={estilos.titulo}>Configuración</Text>
-
       <Text style={estilos.seccion}>Notificaciones</Text>
+
       <View style={estilos.fila}>
-        <Text style={estilos.texto}>Avisos en el celular</Text>
-        <Switch
-          value={config.notificacionesPush}
-          onValueChange={(v) => cambiar("notificacionesPush", v)}
-        />
-      </View>
-      <View style={estilos.fila}>
-        <Text style={estilos.texto}>Avisos por email</Text>
-        <Switch
-          value={config.notificacionesEmail}
-          onValueChange={(v) => cambiar("notificacionesEmail", v)}
-        />
+        <Text style={estilos.texto}>Recibir avisos de mis reportes</Text>
+        <Switch value={avisos} onValueChange={cambiarAvisos} />
       </View>
 
       <Pressable style={estilos.botonSalir} onPress={confirmarCierre}>

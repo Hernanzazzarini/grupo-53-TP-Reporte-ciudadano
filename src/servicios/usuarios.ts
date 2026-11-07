@@ -1,96 +1,109 @@
-import { usuariosMock } from "../mocks/usuarios";
-import {
-  ConfiguracionUsuario,
-  Usuario,
-  UsuarioConPassword,
-} from "../tipos/usuario";
+import { router } from "expo-router";
+import * as SecureStore from "expo-secure-store";
+import { cliente, definirAlVencerLaSesion, definirObtenerToken } from "../api/cliente";
+import { RespuestaUno, Sesion, Usuario } from "../tipos/usuario";
 import { LoginForm, PerfilForm, RegistroForm } from "../utilidades/validacionesUsuario";
 
 // =====================================================================
-// SERVICIO DE USUARIOS (Módulo 5)
-// Hoy trabaja con datos simulados (mocks). Cuando exista la API,
-// solo hay que cambiar el INTERIOR de cada función por un fetch.
-// Las pantallas no se enteran del cambio.
+// SERVICIO DE USUARIOS (Módulo 5) — conectado a la API con Axios.
+// Usa el cliente de src/api/cliente.ts. Las pantallas llaman a estas
+// funciones y no saben nada de la API.
 // =====================================================================
 
-// "Base de datos" en memoria (se reinicia al recargar la app)
-const usuarios: UsuarioConPassword[] = [...usuariosMock];
+const CLAVE_TOKEN = "token-sesion"; // nombre con el que se guarda en el celular
 
-// Usuario con la sesión iniciada (null = nadie logueado)
 let usuarioActual: Usuario | null = null;
+let tokenActual: string | null = null;
+let restaurando = false; // true mientras se recupera la sesión al abrir la app
 
-// Simula la demora de una API real
-const esperar = (ms = 600) => new Promise((r) => setTimeout(r, ms));
+// ---------- Enchufes del cliente de Axios ----------
+// 1) El cliente le pregunta a esta función qué token mandar en cada pedido
+definirObtenerToken(async () => tokenActual);
 
-// Quita la contraseña antes de devolver el usuario a las pantallas
-const sinPassword = ({ password, ...resto }: UsuarioConPassword): Usuario => resto;
+// 2) Si la API responde NO_AUTENTICADO (token vencido), se cierra la sesión
+definirAlVencerLaSesion(() => {
+  limpiarSesion();
+  if (!restaurando) router.replace("/login");
+});
 
+// ---------- Funciones internas ----------
+async function guardarSesion(sesion: Sesion): Promise<Usuario> {
+  tokenActual = sesion.token;
+  usuarioActual = sesion.usuario;
+  await SecureStore.setItemAsync(CLAVE_TOKEN, sesion.token); // queda guardado cifrado
+  return sesion.usuario;
+}
+
+async function limpiarSesion(): Promise<void> {
+  tokenActual = null;
+  usuarioActual = null;
+  await SecureStore.deleteItemAsync(CLAVE_TOKEN);
+}
+
+// ---------- INICIAR SESIÓN: POST /auth/ingreso ----------
 export async function iniciarSesion(datos: LoginForm): Promise<Usuario> {
-  await esperar();
-  const encontrado = usuarios.find(
-    (u) => u.email === datos.email && u.password === datos.password
-  );
-  if (!encontrado) throw new Error("Email o contraseña incorrectos");
-
-  usuarioActual = sinPassword(encontrado);
-  return usuarioActual;
-  // Futuro con API:
-  // const res = await fetch(`${API_URL}/auth/login`, { method: "POST", ... });
-}
-
-export async function registrar(datos: RegistroForm): Promise<Usuario> {
-  await esperar();
-  if (usuarios.some((u) => u.email === datos.email)) {
-    throw new Error("Ya existe una cuenta con ese email");
-  }
-  if (usuarios.some((u) => u.dni === datos.dni)) {
-    throw new Error("Ya existe una cuenta con ese DNI");
-  }
-
-  const nuevo: UsuarioConPassword = {
-    id: Date.now().toString(),
-    nombre: datos.nombre,
-    apellido: datos.apellido,
-    dni: datos.dni,
+  const res = await cliente.post<RespuestaUno<Sesion>>("/auth/ingreso", {
     email: datos.email,
-    password: datos.password,
-    configuracion: { notificacionesPush: true, notificacionesEmail: false },
-  };
-  usuarios.push(nuevo);
-
-  usuarioActual = sinPassword(nuevo); // queda logueado al registrarse
-  return usuarioActual;
+    contrasena: datos.password, // la API lo llama "contrasena"
+  });
+  return guardarSesion(res.data.datos);
 }
 
+// ---------- REGISTRARSE: POST /auth/registro ----------
+// La API controla el email repetido y devuelve la sesión ya iniciada
+export async function registrar(datos: RegistroForm): Promise<Usuario> {
+  const res = await cliente.post<RespuestaUno<Sesion>>("/auth/registro", {
+    nombre: datos.nombre,
+    email: datos.email,
+    contrasena: datos.password,
+    telefono: datos.telefono || null, // vacío -> null
+  });
+  return guardarSesion(res.data.datos);
+}
+
+// ---------- ¿QUIÉN ESTÁ LOGUEADO? ----------
 export function obtenerUsuarioActual(): Usuario | null {
   return usuarioActual;
 }
 
+// ---------- RECUPERAR SESIÓN al abrir la app: GET /yo ----------
+export async function restaurarSesion(): Promise<Usuario | null> {
+  const guardado = await SecureStore.getItemAsync(CLAVE_TOKEN);
+  if (!guardado) return null;
+
+  restaurando = true;
+  tokenActual = guardado;
+  try {
+    const res = await cliente.get<RespuestaUno<Usuario>>("/yo");
+    usuarioActual = res.data.datos;
+    return usuarioActual;
+  } catch {
+    await limpiarSesion(); // token vencido o inválido
+    return null;
+  } finally {
+    restaurando = false;
+  }
+}
+
+// ---------- EDITAR PERFIL: PATCH /yo ----------
 export async function actualizarPerfil(datos: PerfilForm): Promise<Usuario> {
-  await esperar();
-  if (!usuarioActual) throw new Error("No hay sesión iniciada");
-
-  const indice = usuarios.findIndex((u) => u.id === usuarioActual!.id);
-  usuarios[indice] = { ...usuarios[indice], ...datos };
-
-  usuarioActual = sinPassword(usuarios[indice]);
+  const res = await cliente.patch<RespuestaUno<Usuario>>("/yo", {
+    nombre: datos.nombre,
+    telefono: datos.telefono || null,
+  });
+  usuarioActual = res.data.datos;
   return usuarioActual;
 }
 
-export async function actualizarConfiguracion(
-  config: ConfiguracionUsuario
-): Promise<Usuario> {
-  await esperar(300);
-  if (!usuarioActual) throw new Error("No hay sesión iniciada");
-
-  const indice = usuarios.findIndex((u) => u.id === usuarioActual!.id);
-  usuarios[indice] = { ...usuarios[indice], configuracion: config };
-
-  usuarioActual = sinPassword(usuarios[indice]);
+// ---------- AVISOS: PATCH /yo ----------
+export async function actualizarConfiguracion(avisosActivos: boolean): Promise<Usuario> {
+  const res = await cliente.patch<RespuestaUno<Usuario>>("/yo", { avisosActivos });
+  usuarioActual = res.data.datos;
   return usuarioActual;
 }
 
+// ---------- CERRAR SESIÓN ----------
+// La API no tiene "logout": alcanza con borrar el token del celular
 export async function cerrarSesion(): Promise<void> {
-  await esperar(200);
-  usuarioActual = null;
+  await limpiarSesion();
 }

@@ -1,34 +1,27 @@
-// Entidad Usuario (vecino) — Módulo 5
-// Si prefieren tener todo en tipos/index.ts, pueden copiar esto allá
-// o agregar en index.ts la línea:  export * from "./usuario";
+// Entidad Usuario — tal cual la devuelve la API del profe.
+// La API nunca devuelve la contraseña.
 
-export interface ConfiguracionUsuario {
-    notificacionesPush: boolean;
-    notificacionesEmail: boolean;
-  }
-  
-  // Agregado para el modulo 6 (panel municipal): sin esto no hay forma de
-  // distinguir vecino de operador. Si module 5 ya lo tiene resuelto de otra
-  // forma, avisar para unificar.
-  export type Rol = "vecino" | "operador";
+export type Rol = "vecino" | "operador";
 
-  export interface Usuario {
-    id: string;
-    nombre: string;
-    apellido: string;
-    dni: string;
-    email: string;
-    telefono?: string;
-    direccion?: string;
-    rol?: Rol;
-    // Solo tiene valor para operadores; un vecino siempre es null.
-    zonaId?: string | null;
-    configuracion: ConfiguracionUsuario;
-  }
-  
-  // Lo que se guarda en el mock (incluye contraseña).
-  // Nunca se devuelve a las pantallas: por eso es un tipo aparte.
-  export interface UsuarioConPassword extends Usuario {
-    password: string;
-  }
-  
+export interface Usuario {
+  id: string;
+  nombre: string;           // nombre y apellido juntos
+  email: string;
+  telefono: string | null;  // null = no cargó teléfono
+  rol: Rol;                 // desde la app siempre se crea "vecino"
+  zonaId: string | null;    // solo lo usan los operadores
+  avisosActivos: boolean;   // interruptor de notificaciones
+  creadoEn: string;         // fecha de alta
+}
+
+// Lo que devuelven /auth/ingreso y /auth/registro
+export interface Sesion {
+  token: string;
+  usuario: Usuario;
+}
+
+// "Sobre" en el que la API manda las respuestas: { datos, meta }
+export interface RespuestaUno<T> {
+  datos: T;
+  meta: null;
+}

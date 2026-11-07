@@ -1,12 +1,69 @@
-import { Stack } from "expo-router";
-
+import { router, Stack, usePathname } from "expo-router";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AvisosDeEstado from "../componentes/AvisosDeEstado";
+import { obtenerUsuarioActual, restaurarSesion } from "../servicios/usuarios";
 
-export default function RootLayout(){
-  return(
+// Pantallas donde NO se muestra el botón de perfil
+const SIN_BOTON_PERFIL = ["/login", "/registro", "/perfil", "/configuracion"];
+
+export default function RootLayout() {
+  const [listo, setListo] = useState(false);
+  const ruta = usePathname();             // en qué pantalla estamos
+  const margenes = useSafeAreaInsets();   // espacio del notch / barra de estado
+
+  // Módulo 5: al abrir la app, si hay un token guardado, recupera la sesión (GET /yo)
+  useEffect(() => {
+    restaurarSesion().finally(() => setListo(true));
+  }, []);
+
+  // Mientras se recupera la sesión, se muestra un indicador de carga
+  if (!listo) {
+    return (
+      <View style={estilos.cargando}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  const mostrarBotonPerfil =
+    obtenerUsuarioActual() !== null && !SIN_BOTON_PERFIL.includes(ruta);
+
+  return (
     <>
       <AvisosDeEstado />
-      <Stack screenOptions={{headerShown:false}}/>
+      <Stack screenOptions={{ headerShown: false }} />
+
+      {/* Módulo 5: acceso a Mi perfil → Configuración → Cerrar sesión */}
+      {mostrarBotonPerfil && (
+        <Pressable
+          style={[estilos.botonPerfil, { top: margenes.top + 8 }]}
+          onPress={() => router.push("/perfil")}
+        >
+          <Text style={estilos.icono}>👤</Text>
+        </Pressable>
+      )}
     </>
   );
 }
+
+const estilos = StyleSheet.create({
+  cargando: { flex: 1, justifyContent: "center", alignItems: "center" },
+  botonPerfil: {
+    position: "absolute", // flota encima de cualquier pantalla
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 4,         // sombra en Android
+    shadowColor: "#000",  // sombra en iPhone
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  icono: { fontSize: 22 },
+});
