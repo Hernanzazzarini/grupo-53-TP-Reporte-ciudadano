@@ -29,8 +29,10 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 240
         }
-      ], [
-        "expo-location", {
+      ],
+      [
+        "expo-location",
+        {
           "locationWhenInUsePermission": "La aplicación necesita acceder a tu ubicación para mostrarte en el mapa."
         }
       ],
@@ -45,7 +47,8 @@
         }
       ],
       "expo-asset",
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

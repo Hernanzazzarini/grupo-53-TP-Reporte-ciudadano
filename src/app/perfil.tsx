@@ -2,14 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, Redirect } from "expo-router";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import CampoFormulario from "../componentes/CampoFormulario";
 import { actualizarPerfil, obtenerUsuarioActual } from "../servicios/usuarios";
 import { PerfilForm, perfilSchema } from "../utilidades/validacionesUsuario";
@@ -21,34 +14,30 @@ export default function PantallaPerfil() {
   const {
     control,
     handleSubmit,
-    formState: { isSubmitting, isDirty },
+    formState: { isSubmitting, isDirty }, // isDirty: ¿el vecino cambió algo?
     reset,
   } = useForm<PerfilForm>({
     resolver: zodResolver(perfilSchema),
+    // Precarga el formulario con los datos que trajo la API
     defaultValues: {
       nombre: usuario?.nombre ?? "",
-      apellido: usuario?.apellido ?? "",
       telefono: usuario?.telefono ?? "",
-      direccion: usuario?.direccion ?? "",
     },
   });
 
-  // Si no hay sesión, mandamos al login
+  // Si no hay sesión, mandamos al login (va después de los hooks)
   if (!usuario) return <Redirect href="/login" />;
 
   const onSubmit = async (datos: PerfilForm) => {
     setMensaje(null);
     try {
-      const actualizado = await actualizarPerfil(datos);
-      reset({
-        nombre: actualizado.nombre,
-        apellido: actualizado.apellido,
-        telefono: actualizado.telefono ?? "",
-        direccion: actualizado.direccion ?? "",
-      });
+      const actualizado = await actualizarPerfil(datos); // PATCH /yo
+      // Los datos guardados pasan a ser el nuevo punto de partida
+      reset({ nombre: actualizado.nombre, telefono: actualizado.telefono ?? "" });
       setMensaje("✅ Datos guardados");
     } catch (e) {
-      setMensaje((e as Error).message);
+      const error = e as { mensaje?: string; message?: string };
+      setMensaje(error.mensaje ?? error.message ?? "Ocurrió un error inesperado");
     }
   };
 
@@ -58,26 +47,21 @@ export default function PantallaPerfil() {
 
       {/* Datos que no se pueden editar */}
       <View style={estilos.tarjeta}>
-        <Text style={estilos.dato}>DNI: {usuario.dni}</Text>
         <Text style={estilos.dato}>Email: {usuario.email}</Text>
+        <Text style={estilos.dato}>Cuenta: {usuario.rol}</Text>
       </View>
 
-      <CampoFormulario control={control} nombre="nombre" etiqueta="Nombre" />
-      <CampoFormulario control={control} nombre="apellido" etiqueta="Apellido" />
+      <CampoFormulario control={control} nombre="nombre" etiqueta="Nombre y apellido" />
       <CampoFormulario
         control={control}
         nombre="telefono"
         etiqueta="Teléfono (opcional)"
         keyboardType="phone-pad"
       />
-      <CampoFormulario
-        control={control}
-        nombre="direccion"
-        etiqueta="Dirección (opcional)"
-      />
 
       {mensaje && <Text style={estilos.mensaje}>{mensaje}</Text>}
 
+      {/* Desactivado si no hubo cambios o si está guardando */}
       <Pressable
         style={[estilos.boton, (!isDirty || isSubmitting) && estilos.botonDeshabilitado]}
         onPress={handleSubmit(onSubmit)}
