@@ -2,13 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, router } from "expo-router";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-} from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import CampoFormulario from "../componentes/CampoFormulario";
 import { registrar } from "../servicios/usuarios";
 import { RegistroForm, registroSchema } from "../utilidades/validacionesUsuario";
@@ -24,9 +18,8 @@ export default function PantallaRegistro() {
     resolver: zodResolver(registroSchema),
     defaultValues: {
       nombre: "",
-      apellido: "",
-      dni: "",
       email: "",
+      telefono: "",
       password: "",
       confirmarPassword: "",
     },
@@ -35,10 +28,12 @@ export default function PantallaRegistro() {
   const onSubmit = async (datos: RegistroForm) => {
     setErrorServidor(null);
     try {
-      await registrar(datos);
+      await registrar(datos); // POST /auth/registro: crea la cuenta y deja logueado
       router.replace("/");
     } catch (e) {
-      setErrorServidor((e as Error).message);
+      // El error viene traducido por el cliente de Axios (src/api/errores.ts)
+      const error = e as { mensaje?: string; message?: string };
+      setErrorServidor(error.mensaje ?? error.message ?? "Ocurrió un error inesperado");
     }
   };
 
@@ -46,16 +41,7 @@ export default function PantallaRegistro() {
     <ScrollView contentContainerStyle={estilos.contenedor}>
       <Text style={estilos.titulo}>Crear cuenta</Text>
 
-      <CampoFormulario control={control} nombre="nombre" etiqueta="Nombre" />
-      <CampoFormulario control={control} nombre="apellido" etiqueta="Apellido" />
-      <CampoFormulario
-        control={control}
-        nombre="dni"
-        etiqueta="DNI"
-        placeholder="Sin puntos"
-        keyboardType="number-pad"
-        maxLength={8}
-      />
+      <CampoFormulario control={control} nombre="nombre" etiqueta="Nombre y apellido" />
       <CampoFormulario
         control={control}
         nombre="email"
@@ -65,10 +51,11 @@ export default function PantallaRegistro() {
       />
       <CampoFormulario
         control={control}
-        nombre="password"
-        etiqueta="Contraseña"
-        secureTextEntry
+        nombre="telefono"
+        etiqueta="Teléfono (opcional)"
+        keyboardType="phone-pad"
       />
+      <CampoFormulario control={control} nombre="password" etiqueta="Contraseña" secureTextEntry />
       <CampoFormulario
         control={control}
         nombre="confirmarPassword"

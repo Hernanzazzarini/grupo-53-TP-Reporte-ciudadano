@@ -31,7 +31,8 @@ export default function PantallaLogin() {
       await iniciarSesion(datos);
       router.replace("/");
     } catch (e) {
-      setErrorServidor((e as Error).message);
+      const error = e as { mensaje?: string; message?: string };
+      setErrorServidor(error.mensaje ?? error.message ?? "Ocurrió un error inesperado");
     }
   };
 
