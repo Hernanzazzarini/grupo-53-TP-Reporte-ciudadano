@@ -1,13 +1,22 @@
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Redirect, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  AppState,
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { mensajeDeError } from '../api/errores';
 import { reportePorCodigo } from '../servicios/seguimiento';
+import { obtenerUsuarioActual } from '../servicios/usuarios';
 import { Reporte } from '../tipos';
 import { ETIQUETAS_ESTADO } from '../utilidades/estados';
 
@@ -18,16 +27,18 @@ type Fase =
   | { tipo: 'noEncontrado'; codigo: string }
   | { tipo: 'error'; mensaje: string };
 
-// ESTO ESTA PENDIENTE PARA LA AUTENTICACIÓN
-// Esta pantalla es para el operador del mostrador. Proteger la ruta en el layout:
-//
-//   <Stack.Protected guard={usuario?.rol === 'operador'}>
-//     <Stack.Screen name="ventanilla" />
-//   </Stack.Protected>
 export default function PantallaVentanilla() {
   const router = useRouter();
-  const [permiso, pedirPermiso] = useCameraPermissions();
+  const [permiso, pedirPermiso, revisarPermiso] = useCameraPermissions();
   const [fase, setFase] = useState<Fase>({ tipo: 'escaneando' });
+
+  useEffect(() => {
+    const suscripcion = AppState.addEventListener('change', (estado) => {
+      if (estado === 'active') revisarPermiso();
+    });
+
+    return () => suscripcion.remove();
+  }, [revisarPermiso]);
 
   const alEscanear = async ({ data }: { data: string }) => {
     if (fase.tipo !== 'escaneando') return;
@@ -52,6 +63,10 @@ export default function PantallaVentanilla() {
   };
 
   const volverAEscanear = () => setFase({ tipo: 'escaneando' });
+
+  const usuario = obtenerUsuarioActual();
+  if (!usuario) return <Redirect href="/login" />;
+  if (usuario.rol !== 'operador') return <Redirect href="/" />;
 
   return (
     <SafeAreaView style={estilos.pantalla} edges={['top']}>
