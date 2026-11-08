@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import CampoFormulario from "../componentes/CampoFormulario";
 import { actualizarPerfil, obtenerUsuarioActual } from "../servicios/usuarios";
 import { PerfilForm, perfilSchema } from "../utilidades/validacionesUsuario";
+import BotonVolver from "../componentes/BotonVolver";
 
 export default function PantallaPerfil() {
   const usuario = obtenerUsuarioActual();
@@ -43,6 +44,7 @@ export default function PantallaPerfil() {
 
   return (
     <ScrollView contentContainerStyle={estilos.contenedor}>
+      <BotonVolver />
       <Text style={estilos.titulo}>Mi perfil</Text>
 
       {/* Datos que no se pueden editar */}

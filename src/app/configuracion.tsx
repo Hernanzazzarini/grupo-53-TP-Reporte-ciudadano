@@ -1,6 +1,7 @@
 import { Redirect, router } from "expo-router";
 import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import BotonVolver from "../componentes/BotonVolver";
 import {
   actualizarConfiguracion,
   cerrarSesion,
@@ -43,6 +44,7 @@ export default function PantallaConfiguracion() {
 
   return (
     <View style={estilos.contenedor}>
+      <BotonVolver />
       <Text style={estilos.titulo}>Configuración</Text>
       <Text style={estilos.seccion}>Notificaciones</Text>
 
