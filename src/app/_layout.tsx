@@ -5,8 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AvisosDeEstado from "../componentes/AvisosDeEstado";
 import { obtenerUsuarioActual, restaurarSesion } from "../servicios/usuarios";
 
-// Pantallas donde NO se muestra el botón de perfil
-const SIN_BOTON_PERFIL = ["/login", "/registro", "/perfil", "/configuracion"];
+
 
 export default function RootLayout() {
   const [listo, setListo] = useState(false);
@@ -27,8 +26,8 @@ export default function RootLayout() {
     );
   }
 
-  const mostrarBotonPerfil =
-    obtenerUsuarioActual() !== null && !SIN_BOTON_PERFIL.includes(ruta);
+    // El botón de perfil solo aparece en la pantalla de inicio ("/" = index.tsx)
+    const mostrarBotonPerfil = obtenerUsuarioActual() !== null && ruta === "/";
 
   return (
     <>
