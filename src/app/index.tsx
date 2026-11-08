@@ -55,20 +55,22 @@ export default function PantallaInicio() {
           <Ionicons name="chevron-forward" size={22} color="#94A3B8" />
         </Pressable>
 
-        <Pressable
-          onPress={() => router.push("/ventanilla" as any)}
-          role="button"
-          accessibilityLabel="Ventanilla"
-          accessibilityHint="Leé el código QR de un reclamo"
-          style={({ pressed }) => [estilos.boton, pressed && estilos.tocado]}
-        >
-          <Ionicons name="qr-code-outline" size={30} color="#2563EB" />
-          <View style={estilos.textos}>
-            <Text style={estilos.texto}>Ventanilla</Text>
-            <Text style={estilos.ayuda}>Escaneá un código QR</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={22} color="#94A3B8" />
-        </Pressable>
+        {usuario.rol === "operador" && (
+          <Pressable
+            onPress={() => router.push("/ventanilla" as any)}
+            role="button"
+            accessibilityLabel="Ventanilla"
+            accessibilityHint="Leé el código QR de un reclamo"
+            style={({ pressed }) => [estilos.boton, pressed && estilos.tocado]}
+          >
+            <Ionicons name="qr-code-outline" size={30} color="#2563EB" />
+            <View style={estilos.textos}>
+              <Text style={estilos.texto}>Ventanilla</Text>
+              <Text style={estilos.ayuda}>Escaneá un código QR</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={22} color="#94A3B8" />
+          </Pressable>
+        )}
 
         <Pressable
           onPress={() => router.push("/mapa" as any)}
