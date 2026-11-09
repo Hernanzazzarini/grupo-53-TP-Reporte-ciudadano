@@ -32,49 +32,95 @@ export async function sumarmeAReporte(id: string): Promise<void> {
 }
 
 export async function enviarReporte(datos: ReporteDatos) {
-    // 1. Subir las fotos al backend
-    const fotos = await Promise.all(
-        datos.fotosLocales.map(async (uri) => {
-            const nombre = uri.split('/').pop() || 'foto.jpg';
-            const extension = nombre.split('.').pop()?.toLowerCase();
+    let etapa = 'inicio';
 
-            const mimeType =
-                extension === 'png' ? 'image/png' :
-                    extension === 'webp' ? 'image/webp' :
-                        'image/jpeg';
+    try {
+        // 1. Validar datos
+        if (!datos.fotosLocales || datos.fotosLocales.length === 0) {
+            throw new Error('No hay fotografías para enviar.');
+        }
 
-            const archivo = new FormData();
+        if (
+            !Number.isFinite(datos.coordenadas.latitud) ||
+            !Number.isFinite(datos.coordenadas.longitud)
+        ) {
+            throw new Error('Las coordenadas no son válidas.');
+        }
 
-            archivo.append('archivo', {
-                uri,
-                name: nombre,
-                type: mimeType,
-            } as any);
+        console.log('1. Datos del reporte validados');
 
-            const respuesta = await cliente.post<RespuestaUno<ArchivoSubido>>(
-                '/archivos',
-                archivo
-            );
+        // 2. Subir fotografías
+        etapa = 'subida de fotografías';
 
-            return {
-                url: respuesta.data.datos.url,
-                momento: 'problema' as const,
-            };
-        })
-    );
+        const fotos = await Promise.all(
+            datos.fotosLocales.map(async (uri) => {
+                const nombre = uri.split('/').pop() || 'foto.jpg';
+                const extension = nombre.split('.').pop()?.toLowerCase();
 
-    // 2. Crear el reporte con las URLs devueltas por la API
-    const respuesta = await cliente.post<RespuestaUno<Reporte>>(
-        '/reportes',
-        {
+                const mimeType =
+                    extension === 'png' ? 'image/png' :
+                        extension === 'webp' ? 'image/webp' :
+                            'image/jpeg';
+
+                const archivo = new FormData();
+
+                archivo.append('archivo', {
+                    uri,
+                    name: nombre,
+                    type: mimeType,
+                } as any);
+
+                console.log('2. Subiendo fotografía:', nombre);
+
+                const respuesta = await cliente.post<RespuestaUno<ArchivoSubido>>(
+                    '/archivos',
+                    archivo
+                );
+
+                console.log('3. Fotografía subida correctamente');
+
+                const url = respuesta.data?.datos?.url;
+
+                if (!url) {
+                    throw new Error('El servidor no devolvió la URL de la fotografía.');
+                }
+
+                return {
+                    url: respuesta.data.datos.url,
+                };
+            })
+        );
+
+        // 3. Crear reporte
+        etapa = 'creación del reporte';
+
+        const cuerpo = {
             tipoId: datos.tipoId,
             descripcion: datos.descripcion,
             audioUrl: datos.audioUrl,
             fotos,
             coordenadas: datos.coordenadas,
             direccion: datos.direccion,
-        }
-    );
+            creadoEn: new Date().toISOString(),
+        };
 
-    return respuesta.data;
+        console.log('4. Enviando datos del reporte:', cuerpo);
+
+        const respuesta = await cliente.post<RespuestaUno<Reporte>>(
+            '/reportes',
+            cuerpo
+        );
+
+        console.log('5. Reporte creado correctamente:', respuesta.data);
+
+        return respuesta.data;
+
+    } catch (error: any) {
+        console.error(`Error durante ${etapa}:`, error);
+        console.error('Mensaje:', error.message);
+        console.error('Respuesta del servidor:', error.response?.data);
+        console.error('Código HTTP:', error.response?.status);
+
+        throw error;
+    }
 }

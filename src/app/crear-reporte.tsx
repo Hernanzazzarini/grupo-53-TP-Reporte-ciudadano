@@ -2,15 +2,17 @@ import { Coordenadas, Reporte } from '@/tipos';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { leerUbicacion, obtenerDireccion } from '../lib/leer-ubicacion';
+import { geocodificarDireccion, leerUbicacion, obtenerDireccion } from '../lib/leer-ubicacion';
+import { adherirAReporte } from '../servicios/adhesiones';
 import {
     enviarReporte,
     obtenerReportesCercanos,
     sumarmeAReporte,
 } from '../servicios/reportes';
+import { obtenerUsuarioActual } from '../servicios/usuarios';
 
 export default function PantallaCatalogo() {
     const [coordenadas, setCoordenadas] = useState<Coordenadas>({ latitud: -33.0089, longitud: -58.5142, });
@@ -19,6 +21,10 @@ export default function PantallaCatalogo() {
     const [buscandoCercanos, setBuscandoCercanos] = useState(false);
     const [mostrarCercanos, setMostrarCercanos] = useState(false);
     const [ubicacionManual, setUbicacionManual] = useState(false);
+    const mapaRef = useRef<MapView>(null);
+    const actualizandoDesdeMapa = useRef(false);
+    const ultimaBusqueda = useRef(0);
+    const usuario = obtenerUsuarioActual();
 
     const obtenerUbicacion = async () => {
         const nuevaUbicacion = await leerUbicacion();
@@ -40,6 +46,45 @@ export default function PantallaCatalogo() {
     useEffect(() => {
         obtenerUbicacion();
     }, []);
+
+    useEffect(() => {
+        if (actualizandoDesdeMapa.current) {
+            actualizandoDesdeMapa.current = false;
+            return;
+        }
+
+        const direccionBuscada = direccion.trim();
+
+        if (direccionBuscada.length < 5) {
+            return;
+        }
+
+        const temporizador = setTimeout(async () => {
+            const idBusqueda = ++ultimaBusqueda.current;
+
+            const nuevasCoordenadas =
+                await geocodificarDireccion(direccionBuscada);
+
+            // Evita actualizar el mapa con resultados anteriores.
+            if (idBusqueda !== ultimaBusqueda.current) {
+                return;
+            }
+
+            if (nuevasCoordenadas) {
+                setCoordenadas(nuevasCoordenadas);
+
+                mapaRef.current?.animateToRegion({
+                    latitude: nuevasCoordenadas.latitud,
+                    longitude: nuevasCoordenadas.longitud,
+                    latitudeDelta: 0.005,
+                    longitudeDelta: 0.005,
+                }, 800);
+            }
+        }, 800);
+
+        return () => clearTimeout(temporizador);
+
+    }, [direccion]);
 
 
     const { tipoId } = useLocalSearchParams<{ tipoId: string }>();
@@ -78,11 +123,16 @@ export default function PantallaCatalogo() {
                 setMostrarCercanos(false);
                 await crearReporte();
             }
-        } catch (error) {
+        } catch (error: any) {
+            console.log('Error al crear reporte:', error.response?.data || error);
+
             Alert.alert(
-                'Error',
-                'No se pudieron consultar los reportes cercanos. Intentá nuevamente.'
+                'Error al enviar reporte',
+                error.response?.data?.mensaje ||
+                error.message ||
+                'No se pudo enviar el reporte.'
             );
+
         } finally {
             setBuscandoCercanos(false);
         }
@@ -106,13 +156,25 @@ export default function PantallaCatalogo() {
                 direccion,
             });
 
+            console.log('Respuesta del servidor:', respuesta);
+
             Alert.alert(
                 '¡Reporte creado!',
                 `Número de seguimiento: ${respuesta.datos.codigo}`,
                 [{ text: 'Aceptar', onPress: () => router.replace('/') }]
             );
-        } catch (error) {
-            Alert.alert('Error', 'No se pudo enviar el reporte.');
+
+        } catch (error: any) {
+            console.log('ERROR COMPLETO:', error);
+            console.log('ERROR DEL SERVIDOR:', error.response?.data);
+
+            Alert.alert(
+                'Error al enviar reporte',
+                error.response?.data?.mensaje ||
+                error.message ||
+                'No se pudo enviar el reporte.'
+            );
+
         } finally {
             setEnviando(false);
         }
@@ -166,22 +228,35 @@ export default function PantallaCatalogo() {
                     <Text style={styles.textoBotonFoto}> Tomar Foto</Text>
                 </TouchableOpacity>
             )}
+            <Text style={styles.label}>Descripcion / Observaciones</Text>
+            <TextInput
+                style={styles.input}
+                placeholder="Contanos que pasa..."
+                multiline
+                numberOfLines={4}
+                value={descripcion}
+                onChangeText={setDescripcion}
+            />
             <Text style={styles.label}>Ubicacion</Text>
             <View style={styles.boxUbicacion}>
                 <Ionicons name="location-outline" size={24} color="#DC2626" />
-                <Text style={styles.textoUbicacion}>{direccion}</Text>
+                <TextInput
+                    style={styles.inputUbicacion}
+                    placeholder="Escribí la dirección del problema..."
+                    value={direccion}
+                    onChangeText={setDireccion}
+                    placeholderTextColor="#9CA3AF"
+                />
 
             </View>
+            <Text style={styles.textoAyuda}>
+                Podés escribir la dirección o seleccionarla directamente en el mapa.
+            </Text>
 
             <MapView
+                ref={mapaRef}
                 style={{ width: '100%', height: 280, borderRadius: 12 }}
                 initialRegion={{
-                    latitude: coordenadas.latitud,
-                    longitude: coordenadas.longitud,
-                    latitudeDelta: 0.005,
-                    longitudeDelta: 0.005,
-                }}
-                region={{
                     latitude: coordenadas.latitud,
                     longitude: coordenadas.longitud,
                     latitudeDelta: 0.005,
@@ -196,7 +271,11 @@ export default function PantallaCatalogo() {
                     setCoordenadas(punto);
 
                     const nuevaDireccion = await obtenerDireccion(punto);
-                    setDireccion(nuevaDireccion ?? 'Dirección no disponible');
+                    if (nuevaDireccion) {
+                        actualizandoDesdeMapa.current = true;
+                        ultimaBusqueda.current++;
+                        setDireccion(nuevaDireccion);
+                    }
                 }}
             >
                 <Marker
@@ -204,7 +283,7 @@ export default function PantallaCatalogo() {
                         latitude: coordenadas.latitud,
                         longitude: coordenadas.longitud,
                     }}
-                    draggable
+                    draggable={true}
                     onDragEnd={async (event) => {
                         const punto = {
                             latitud: event.nativeEvent.coordinate.latitude,
@@ -214,7 +293,11 @@ export default function PantallaCatalogo() {
                         setCoordenadas(punto);
 
                         const nuevaDireccion = await obtenerDireccion(punto);
-                        setDireccion(nuevaDireccion ?? 'Dirección no disponible');
+                        if (nuevaDireccion) {
+                            actualizandoDesdeMapa.current = true;
+                            ultimaBusqueda.current++;
+                            setDireccion(nuevaDireccion);
+                        }
                     }}
                 />
             </MapView>
@@ -245,15 +328,21 @@ export default function PantallaCatalogo() {
                                 Estado: {item.estado}
                             </Text>
 
-                            <TouchableOpacity
-                                style={styles.botonEnviar}
-                                disabled={enviando}
-                                onPress={() => adherirse(item.id)}
-                            >
-                                <Text style={styles.textoBotonEnviar}>
-                                    Sumarme a este reporte
+                            {item.autorId === usuario?.id ? (
+                                <Text style={styles.textoBotonSecundario}>
+                                    Ya sos el autor de este reclamo
                                 </Text>
-                            </TouchableOpacity>
+                            ) : (
+                                <TouchableOpacity
+                                    style={styles.botonEnviar}
+                                    disabled={enviando}
+                                    onPress={() => adherirAReporte(item.id)}
+                                >
+                                    <Text style={styles.textoBotonEnviar}>
+                                        Sumarme a este reclamo
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
                     ))}
 
@@ -266,36 +355,25 @@ export default function PantallaCatalogo() {
                         style={styles.botonCambiar}
                     >
                         <Text style={styles.textoBotonSecundario}>
-                            Ninguno es el mismo problema. Crear uno nuevo.
+                            No es el mismo problema. Crear uno nuevo.
                         </Text>
                     </TouchableOpacity>
                 </View>
             )}
 
 
-            <Text style={styles.label}>Descripcion / Observaciones</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Contanos que pasa..."
-                multiline
-                numberOfLines={4}
-                value={descripcion}
-                onChangeText={setDescripcion}
-            />
-            <TouchableOpacity
-                style={[styles.botonEnviar, enviando && styles.botonDesactivado]}
-                onPress={buscarCercanos}
-                disabled={enviando || buscandoCercanos}
-            >
-                <Text style={styles.textoBotonEnviar}>
-                    {buscandoCercanos
-                        ? 'Buscando reportes cercanos...'
-                        : enviando
-                            ? 'Enviando...'
-                            : 'Continuar'}
-                </Text>
-            </TouchableOpacity>
 
+            {!mostrarCercanos && (
+                <TouchableOpacity
+                    style={styles.botonEnviar}
+                    onPress={buscarCercanos}
+                    disabled={enviando || buscandoCercanos}
+                >
+                    <Text style={styles.textoBotonEnviar}>
+                        {buscandoCercanos ? 'Buscando...' : 'Continuar'}
+                    </Text>
+                </TouchableOpacity>
+            )}
         </ScrollView>
     )
 }
@@ -335,6 +413,19 @@ const styles = StyleSheet.create({
         textAlignVertical: 'top',
         fontSize: 15,
 
+    },
+    inputUbicacion: {
+        flex: 1,
+        marginLeft: 8,
+        fontSize: 15,
+        color: '#1F2937',
+        paddingVertical: 8,
+    },
+
+    textoAyuda: {
+        fontSize: 12,
+        color: '#6B7280',
+        marginTop: 6,
     },
     botonEnviar: {
         backgroundColor: '#16A34A',

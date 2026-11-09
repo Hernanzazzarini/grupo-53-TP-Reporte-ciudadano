@@ -1,6 +1,6 @@
 import type { Coordenadas } from "@/tipos";
 
-function calcularDistancia(
+export function calcularDistancia(
     origen: Coordenadas,
     destino: Coordenadas
 ): number {
