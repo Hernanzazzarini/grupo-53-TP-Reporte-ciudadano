@@ -10,13 +10,12 @@ import { adherirAReporte } from '../servicios/adhesiones';
 import {
     enviarReporte,
     obtenerReportesCercanos,
-    sumarmeAReporte,
 } from '../servicios/reportes';
 import { obtenerUsuarioActual } from '../servicios/usuarios';
 
 export default function PantallaCatalogo() {
-    const [coordenadas, setCoordenadas] = useState<Coordenadas>({ latitud: -33.0089, longitud: -58.5142, });
-    const [direccion, setDireccion] = useState<string>("Rocamora 1240");
+    const [coordenadas, setCoordenadas] = useState<Coordenadas>({ latitud: -33.0077777, longitud: -58.5142, });
+    const [direccion, setDireccion] = useState<string>("Rocamora 1240, Gualeguaychu");
     const [reportesCercanos, setReportesCercanos] = useState<Reporte[]>([]);
     const [buscandoCercanos, setBuscandoCercanos] = useState(false);
     const [mostrarCercanos, setMostrarCercanos] = useState(false);
@@ -25,6 +24,7 @@ export default function PantallaCatalogo() {
     const actualizandoDesdeMapa = useRef(false);
     const ultimaBusqueda = useRef(0);
     const usuario = obtenerUsuarioActual();
+    const scrollRef = useRef<ScrollView>(null);
 
     const obtenerUbicacion = async () => {
         const nuevaUbicacion = await leerUbicacion();
@@ -119,6 +119,11 @@ export default function PantallaCatalogo() {
             if (encontrados.length > 0) {
                 setReportesCercanos(encontrados);
                 setMostrarCercanos(true);
+                setTimeout(() => {
+                    scrollRef.current?.scrollToEnd({
+                        animated: true,
+                    });
+                }, 500);
             } else {
                 setMostrarCercanos(false);
                 await crearReporte();
@@ -180,26 +185,12 @@ export default function PantallaCatalogo() {
         }
     };
 
-    const adherirse = async (id: string) => {
-        setEnviando(true);
-
-        try {
-            await sumarmeAReporte(id);
-
-            Alert.alert(
-                '¡Te sumaste al reporte!',
-                'Tu adhesión fue registrada correctamente.',
-                [{ text: 'Aceptar', onPress: () => router.replace('/') }]
-            );
-        } catch (error) {
-            Alert.alert('Error', 'No se pudo registrar tu adhesión.');
-        } finally {
-            setEnviando(false);
-        }
-    };
-
     return (
-        <ScrollView style={styles.container}>
+        <ScrollView ref={scrollRef}
+            style={styles.container}
+            contentContainerStyle={styles.contenidoScroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
             <Pressable
                 onPress={() => router.replace('/')}
                 hitSlop={16}
@@ -352,8 +343,19 @@ export default function PantallaCatalogo() {
                             crearReporte();
                         }}
                         disabled={enviando}
-                        style={styles.botonCambiar}
+                        activeOpacity={0.7}
+                        style={[
+                            styles.botonNuevoReporte,
+                            enviando && styles.botonDesactivado,
+                        ]}
                     >
+                        <Ionicons
+                            name="add-circle-outline"
+                            size={21}
+                            color="#0284C7"
+                            style={{ marginRight: 8 }}
+                        />
+
                         <Text style={styles.textoBotonSecundario}>
                             No es el mismo problema. Crear uno nuevo.
                         </Text>
@@ -435,6 +437,28 @@ const styles = StyleSheet.create({
         marginTop: 30,
         marginBottom: 50,
     },
+    botonNuevoReporte: {
+        width: '100%',
+        minHeight: 58,
+        marginTop: 20,
+        marginBottom: 15,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderWidth: 1.5,
+        borderColor: '#0284C7',
+        borderRadius: 12,
+        backgroundColor: '#FFFFFF',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+    },
+
+    textoBotonNuevoReporte: {
+        color: '#0284C7',
+        fontSize: 15,
+        fontWeight: '700',
+        textAlign: 'center',
+    },
     botonVolver: {
         width: 44,
         height: 44,
@@ -463,6 +487,10 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 16,
         marginBottom: 6,
+    },
+    contenidoScroll: {
+        flexGrow: 1,
+        paddingBottom: 60,
     },
 
 });
