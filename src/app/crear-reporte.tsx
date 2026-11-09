@@ -1,36 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { Coordenadas } from '@/tipos';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, Image, Alert, ScrollView, } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Coordenadas, Reporte } from '@/tipos';
 import Ionicons from '@react-native-vector-icons/ionicons';
-import { enviarReporte } from '../servicios/reportes';
-import { leerUbicacion, obtenerDireccion } from '../lib/leer-ubicacion'
 import * as ImagePicker from 'expo-image-picker';
-
-
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
+import { leerUbicacion, obtenerDireccion } from '../lib/leer-ubicacion';
+import {
+    enviarReporte,
+    obtenerReportesCercanos,
+    sumarmeAReporte,
+} from '../servicios/reportes';
 
 export default function PantallaCatalogo() {
-    const [coordenadas, setCoordenadas] = useState<Coordenadas>({ latitud: -31.39195, longitud: -58.01706 });
+    const [coordenadas, setCoordenadas] = useState<Coordenadas>({ latitud: -33.0089, longitud: -58.5142, });
     const [direccion, setDireccion] = useState<string>("Rocamora 1240");
+    const [reportesCercanos, setReportesCercanos] = useState<Reporte[]>([]);
+    const [buscandoCercanos, setBuscandoCercanos] = useState(false);
+    const [mostrarCercanos, setMostrarCercanos] = useState(false);
+    const [ubicacionManual, setUbicacionManual] = useState(false);
 
+    const obtenerUbicacion = async () => {
+        const nuevaUbicacion = await leerUbicacion();
+
+        if (nuevaUbicacion) {
+            setCoordenadas(nuevaUbicacion);
+
+            const nuevaDireccion = await obtenerDireccion(nuevaUbicacion);
+            setDireccion(nuevaDireccion ?? 'Dirección no disponible');
+        } else {
+            setUbicacionManual(true);
+            Alert.alert(
+                'Ubicación no disponible',
+                'Podés seleccionar manualmente el lugar del problema en el mapa.'
+            );
+        }
+    };
 
     useEffect(() => {
-        const obtenerUbicacion = async () => {
-            const nuevaUbicacion = await leerUbicacion();
-
-            if (nuevaUbicacion !== null) {
-                setCoordenadas(nuevaUbicacion);
-
-                const nuevaDireccion =
-                    await obtenerDireccion(nuevaUbicacion);
-
-                setDireccion(nuevaDireccion ?? "Dirección no disponible");
-            }
-        };
-
         obtenerUbicacion();
     }, []);
-    
+
+
     const { tipoId } = useLocalSearchParams<{ tipoId: string }>();
     const router = useRouter();
 
@@ -53,34 +64,78 @@ export default function PantallaCatalogo() {
         }
     }
 
-    const manejarEnvio = async () => {
+
+    const buscarCercanos = async () => {
+        setBuscandoCercanos(true);
+
+        try {
+            const encontrados = await obtenerReportesCercanos(coordenadas);
+
+            if (encontrados.length > 0) {
+                setReportesCercanos(encontrados);
+                setMostrarCercanos(true);
+            } else {
+                setMostrarCercanos(false);
+                await crearReporte();
+            }
+        } catch (error) {
+            Alert.alert(
+                'Error',
+                'No se pudieron consultar los reportes cercanos. Intentá nuevamente.'
+            );
+        } finally {
+            setBuscandoCercanos(false);
+        }
+    };
+
+    const crearReporte = async () => {
         if (!foto) {
-            Alert.alert('Foto obligatoria', 'Por favor ,saca una foto del problema antes de enviar');
+            Alert.alert('Foto obligatoria', 'Sacá una foto antes de continuar.');
             return;
         }
 
         setEnviando(true);
+
         try {
             const respuesta = await enviarReporte({
                 tipoId: tipoId || 'tip-otro',
                 descripcion: descripcion || null,
                 audioUrl: null,
-                fotosLocales: [foto],
+                fotosLocales: [foto!],
                 coordenadas,
                 direccion,
             });
+
             Alert.alert(
-                '¡Reporte Creado!',
-                `Nùmero de seguimiento: ${respuesta.datos.codigo}`,
+                '¡Reporte creado!',
+                `Número de seguimiento: ${respuesta.datos.codigo}`,
                 [{ text: 'Aceptar', onPress: () => router.replace('/') }]
             );
-
-        } catch (e) {
-            Alert.alert('Error', 'No se pudo enviar el reporte');
+        } catch (error) {
+            Alert.alert('Error', 'No se pudo enviar el reporte.');
         } finally {
             setEnviando(false);
         }
     };
+
+    const adherirse = async (id: string) => {
+        setEnviando(true);
+
+        try {
+            await sumarmeAReporte(id);
+
+            Alert.alert(
+                '¡Te sumaste al reporte!',
+                'Tu adhesión fue registrada correctamente.',
+                [{ text: 'Aceptar', onPress: () => router.replace('/') }]
+            );
+        } catch (error) {
+            Alert.alert('Error', 'No se pudo registrar tu adhesión.');
+        } finally {
+            setEnviando(false);
+        }
+    };
+
     return (
         <ScrollView style={styles.container}>
             <Pressable
@@ -117,6 +172,107 @@ export default function PantallaCatalogo() {
                 <Text style={styles.textoUbicacion}>{direccion}</Text>
 
             </View>
+
+            <MapView
+                style={{ width: '100%', height: 280, borderRadius: 12 }}
+                initialRegion={{
+                    latitude: coordenadas.latitud,
+                    longitude: coordenadas.longitud,
+                    latitudeDelta: 0.005,
+                    longitudeDelta: 0.005,
+                }}
+                region={{
+                    latitude: coordenadas.latitud,
+                    longitude: coordenadas.longitud,
+                    latitudeDelta: 0.005,
+                    longitudeDelta: 0.005,
+                }}
+                onPress={async (event) => {
+                    const punto = {
+                        latitud: event.nativeEvent.coordinate.latitude,
+                        longitud: event.nativeEvent.coordinate.longitude,
+                    };
+
+                    setCoordenadas(punto);
+
+                    const nuevaDireccion = await obtenerDireccion(punto);
+                    setDireccion(nuevaDireccion ?? 'Dirección no disponible');
+                }}
+            >
+                <Marker
+                    coordinate={{
+                        latitude: coordenadas.latitud,
+                        longitude: coordenadas.longitud,
+                    }}
+                    draggable
+                    onDragEnd={async (event) => {
+                        const punto = {
+                            latitud: event.nativeEvent.coordinate.latitude,
+                            longitud: event.nativeEvent.coordinate.longitude,
+                        };
+
+                        setCoordenadas(punto);
+
+                        const nuevaDireccion = await obtenerDireccion(punto);
+                        setDireccion(nuevaDireccion ?? 'Dirección no disponible');
+                    }}
+                />
+            </MapView>
+
+
+            {mostrarCercanos && (
+                <View style={styles.seccionCercanos}>
+                    <Text style={styles.titulo}>
+                        ¿Ya existe este problema?
+                    </Text>
+
+                    <Text style={styles.textoUbicacion}>
+                        Encontramos reportes a menos de 50 metros.
+                        ¿Es alguno de estos?
+                    </Text>
+
+                    {reportesCercanos.map((item) => (
+                        <View key={item.id} style={styles.tarjetaReporte}>
+                            <Text style={styles.nombreReporte}>
+                                {item.direccion}
+                            </Text>
+
+                            <Text>
+                                {item.descripcion ?? 'Sin descripción'}
+                            </Text>
+
+                            <Text>
+                                Estado: {item.estado}
+                            </Text>
+
+                            <TouchableOpacity
+                                style={styles.botonEnviar}
+                                disabled={enviando}
+                                onPress={() => adherirse(item.id)}
+                            >
+                                <Text style={styles.textoBotonEnviar}>
+                                    Sumarme a este reporte
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    ))}
+
+                    <TouchableOpacity
+                        onPress={() => {
+                            setMostrarCercanos(false);
+                            crearReporte();
+                        }}
+                        disabled={enviando}
+                        style={styles.botonCambiar}
+                    >
+                        <Text style={styles.textoBotonSecundario}>
+                            Ninguno es el mismo problema. Crear uno nuevo.
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
+
             <Text style={styles.label}>Descripcion / Observaciones</Text>
             <TextInput
                 style={styles.input}
@@ -128,13 +284,18 @@ export default function PantallaCatalogo() {
             />
             <TouchableOpacity
                 style={[styles.botonEnviar, enviando && styles.botonDesactivado]}
-                onPress={manejarEnvio}
-                disabled={enviando}
+                onPress={buscarCercanos}
+                disabled={enviando || buscandoCercanos}
             >
-                < Text style={styles.textoBotonEnviar}>
-                    {enviando ? 'Enviando...' : 'Enviar reporte'}
+                <Text style={styles.textoBotonEnviar}>
+                    {buscandoCercanos
+                        ? 'Buscando reportes cercanos...'
+                        : enviando
+                            ? 'Enviando...'
+                            : 'Continuar'}
                 </Text>
             </TouchableOpacity>
+
         </ScrollView>
     )
 }
@@ -191,10 +352,28 @@ const styles = StyleSheet.create({
         marginBottom: 10,
         zIndex: 10,
     },
-
-
     botonDesactivado: { opacity: 0.6 },
     textoBotonEnviar: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 18 },
+    seccionCercanos: {
+        marginTop: 20,
+        padding: 12,
+        backgroundColor: '#EFF6FF',
+        borderRadius: 12,
+    },
+    tarjetaReporte: {
+        backgroundColor: '#FFFFFF',
+        padding: 14,
+        borderRadius: 10,
+        marginTop: 12,
+        borderWidth: 1,
+        borderColor: '#BFDBFE',
+    },
+    nombreReporte: {
+        fontWeight: 'bold',
+        fontSize: 16,
+        marginBottom: 6,
+    },
+
 });
 
 

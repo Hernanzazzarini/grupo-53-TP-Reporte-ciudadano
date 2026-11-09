@@ -1,25 +1,80 @@
-import { TipoDeReporte, ReporteDatos } from '../tipos';
 
-export const obtenerTiposDeReporte = async (): Promise<TipoDeReporte[]> => {
-    return [
-        { id: 'tip-bache', nombre: 'Bacheo / Calles', icono: 'construct', color: '#EA580C', areaResponsable: 'Obras Públicas' },
-        { id: 'tip-luz', nombre: 'Alumbrado Público', icono: 'bulb', color: '#CA8A04', areaResponsable: 'Alumbrado Público' },
-        { id: 'tip-basura', nombre: 'Higiene / Basura', icono: 'trash', color: '#16A34A', areaResponsable: 'Higiene Urbana' },
-        { id: 'tip-arbol', nombre: 'Arbolado / Espacios verdes', icono: 'leaf', color: '#059669', areaResponsable: 'Espacios Verdes' },
-        { id: 'tip-agua', nombre: 'Agua o cloaca', icono: 'water', color: '#0284C7', areaResponsable: 'Obras Sanitarias' },
-        { id: 'tip-semaforo', nombre: 'Semáforo', icono: 'alert-circle', color: '#DC2626', areaResponsable: 'Tránsito' },
-        { id: 'tip-vereda', nombre: 'Vereda', icono: 'walk', color: '#7C3AED', areaResponsable: 'Obras Públicas' },
-        { id: 'tip-otro', nombre: 'Otros Reclamos', icono: 'ellipsis-horizontal-circle', color: '#2563EB', areaResponsable: 'Centro de Atención al Vecino' },
-    ];
-};
+import { cliente } from '../api/cliente';
+import type { Coordenadas, Reporte, ReporteDatos, TipoDeReporte } from '../tipos';
+import type { ArchivoSubido, RespuestaLista, RespuestaUno } from '../tipos/api';
 
-export const enviarReporte = async (datos: ReporteDatos) => {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    const numeroAleatorio = Math.floor(1000 + Math.random() * 9000);
-    return {
-        exito: true,
-        datos: {
-            codigo: `GCHU-2026-${numeroAleatorio}`,
-        },
-    };
-};
+export async function obtenerTiposDeReporte(): Promise<TipoDeReporte[]> {
+    const respuesta = await cliente.get('/tipos-de-reporte');
+    return respuesta.data.datos;
+}
+
+export async function obtenerReportesCercanos(
+    coordenadas: Coordenadas,
+    tipoId?: string
+): Promise<Reporte[]> {
+    const respuesta = await cliente.get<RespuestaLista<Reporte>>(
+        '/reportes/cercanos',
+        {
+            params: {
+                latitud: coordenadas.latitud,
+                longitud: coordenadas.longitud,
+                radioMetros: 50,
+                ...(tipoId ? { tipoId } : {}),
+            },
+        }
+    );
+
+    return respuesta.data.datos;
+}
+
+export async function sumarmeAReporte(id: string): Promise<void> {
+    await cliente.post(`/reportes/${id}/adhesiones`);
+}
+
+export async function enviarReporte(datos: ReporteDatos) {
+    // 1. Subir las fotos al backend
+    const fotos = await Promise.all(
+        datos.fotosLocales.map(async (uri) => {
+            const nombre = uri.split('/').pop() || 'foto.jpg';
+            const extension = nombre.split('.').pop()?.toLowerCase();
+
+            const mimeType =
+                extension === 'png' ? 'image/png' :
+                    extension === 'webp' ? 'image/webp' :
+                        'image/jpeg';
+
+            const archivo = new FormData();
+
+            archivo.append('archivo', {
+                uri,
+                name: nombre,
+                type: mimeType,
+            } as any);
+
+            const respuesta = await cliente.post<RespuestaUno<ArchivoSubido>>(
+                '/archivos',
+                archivo
+            );
+
+            return {
+                url: respuesta.data.datos.url,
+                momento: 'problema' as const,
+            };
+        })
+    );
+
+    // 2. Crear el reporte con las URLs devueltas por la API
+    const respuesta = await cliente.post<RespuestaUno<Reporte>>(
+        '/reportes',
+        {
+            tipoId: datos.tipoId,
+            descripcion: datos.descripcion,
+            audioUrl: datos.audioUrl,
+            fotos,
+            coordenadas: datos.coordenadas,
+            direccion: datos.direccion,
+        }
+    );
+
+    return respuesta.data;
+}
