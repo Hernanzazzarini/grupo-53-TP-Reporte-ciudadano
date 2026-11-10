@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LineaDeTiempo } from '../componentes/LineaDeTiempo';
+import { marcarComoDuplicado } from '../servicios/adhesiones';
 import {
   agregarFotoArreglo,
   asignarCuadrilla,
@@ -23,7 +24,7 @@ import {
   cuadrillasParaReporte,
 } from '../servicios/cuadrillas';
 import { obtenerTiposDeReporte } from '../servicios/reportes';
-import { historialDeReporte, reportePorId } from '../servicios/seguimiento';
+import { historialDeReporte, reportePorCodigo, reportePorId } from '../servicios/seguimiento';
 import { obtenerUsuarioActual } from '../servicios/usuarios';
 import { CambioDeEstado, Cuadrilla, EstadoReporte, Reporte, TipoDeReporte } from '../tipos';
 import { COLORES_ESTADO, ETIQUETAS_ESTADO } from '../utilidades/estados';
@@ -31,9 +32,21 @@ import { estadosSiguientes } from '../utilidades/reglasOperador';
 
 type EstadoPantalla =
   | { fase: 'cargando' }
-  | { fase: 'listo'; reporte: Reporte; historial: CambioDeEstado[]; cuadrillas: Cuadrilla[] }
+  | {
+      fase: 'listo';
+      reporte: Reporte;
+      historial: CambioDeEstado[];
+      cuadrillas: Cuadrilla[];
+      original: Reporte | null;
+    }
   | { fase: 'noEncontrado' }
   | { fase: 'error'; mensaje: string };
+
+type BusquedaOriginal =
+  | { fase: 'inactiva' }
+  | { fase: 'buscando' }
+  | { fase: 'encontrado'; reporte: Reporte }
+  | { fase: 'noEncontrado' };
 
 export default function PantallaGestionarReclamo() {
   const router = useRouter();
@@ -43,6 +56,8 @@ export default function PantallaGestionarReclamo() {
   const [categorias, setCategorias] = useState<TipoDeReporte[]>([]);
   const [comentario, setComentario] = useState('');
   const [procesando, setProcesando] = useState(false);
+  const [codigoOriginal, setCodigoOriginal] = useState('');
+  const [busquedaOriginal, setBusquedaOriginal] = useState<BusquedaOriginal>({ fase: 'inactiva' });
 
   const cargar = useCallback(async () => {
     if (!id) {
@@ -64,8 +79,11 @@ export default function PantallaGestionarReclamo() {
         return;
       }
 
-      const cuadrillas = await cuadrillasParaReporte(id);
-      setPantalla({ fase: 'listo', reporte, historial, cuadrillas });
+      const [cuadrillas, original] = await Promise.all([
+        cuadrillasParaReporte(id),
+        reporte.duplicadoDe ? reportePorId(reporte.duplicadoDe) : Promise.resolve(null),
+      ]);
+      setPantalla({ fase: 'listo', reporte, historial, cuadrillas, original });
     } catch (error) {
       setPantalla({
         fase: 'error',
@@ -111,6 +129,45 @@ export default function PantallaGestionarReclamo() {
     } catch (error) {
       Alert.alert(
         'No se pudo asignar',
+        error instanceof Error ? error.message : 'Intentá de nuevo.',
+      );
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const buscarOriginal = async () => {
+    const codigo = codigoOriginal.trim();
+    if (!codigo) return;
+
+    setBusquedaOriginal({ fase: 'buscando' });
+    try {
+      const encontrado = await reportePorCodigo(codigo);
+      if (!encontrado || encontrado.id === id) {
+        setBusquedaOriginal({ fase: 'noEncontrado' });
+        return;
+      }
+      setBusquedaOriginal({ fase: 'encontrado', reporte: encontrado });
+    } catch (error) {
+      Alert.alert(
+        'No se pudo buscar',
+        error instanceof Error ? error.message : 'Intentá de nuevo.',
+      );
+      setBusquedaOriginal({ fase: 'inactiva' });
+    }
+  };
+
+  const confirmarDuplicado = async (original: Reporte) => {
+    if (!id) return;
+    setProcesando(true);
+    try {
+      await marcarComoDuplicado(id, original.id);
+      setCodigoOriginal('');
+      setBusquedaOriginal({ fase: 'inactiva' });
+      await cargar();
+    } catch (error) {
+      Alert.alert(
+        'No se pudo marcar como duplicado',
         error instanceof Error ? error.message : 'Intentá de nuevo.',
       );
     } finally {
@@ -292,6 +349,68 @@ export default function PantallaGestionarReclamo() {
           </View>
 
           <View style={estilos.bloque}>
+            <Text style={estilos.tituloBloque}>Duplicado</Text>
+            {pantalla.reporte.duplicadoDe ? (
+              <Text style={estilos.textoMensaje}>
+                Marcado como duplicado de{' '}
+                {pantalla.original ? pantalla.original.codigo : pantalla.reporte.duplicadoDe}.
+              </Text>
+            ) : (
+              <>
+                <TextInput
+                  style={estilos.input}
+                  placeholder="Código del reclamo original (ej. GCHU-2026-00412)"
+                  autoCapitalize="characters"
+                  value={codigoOriginal}
+                  onChangeText={(texto) => {
+                    setCodigoOriginal(texto);
+                    setBusquedaOriginal({ fase: 'inactiva' });
+                  }}
+                />
+                <Pressable
+                  onPress={buscarOriginal}
+                  disabled={procesando || busquedaOriginal.fase === 'buscando'}
+                  role="button"
+                  accessibilityLabel="Buscar reclamo original"
+                  style={({ pressed }) => [estilos.boton, pressed && estilos.tocado]}
+                >
+                  <Text style={estilos.textoBoton}>
+                    {busquedaOriginal.fase === 'buscando' ? 'Buscando…' : 'Buscar'}
+                  </Text>
+                </Pressable>
+
+                {busquedaOriginal.fase === 'noEncontrado' && (
+                  <Text style={estilos.textoMensaje}>
+                    No encontramos un reclamo distinto con ese código.
+                  </Text>
+                )}
+
+                {busquedaOriginal.fase === 'encontrado' && (
+                  <View style={estilos.filaCuadrilla}>
+                    <View style={estilos.textos}>
+                      <Text style={estilos.nombreCuadrilla}>
+                        {busquedaOriginal.reporte.codigo}
+                      </Text>
+                      <Text style={estilos.especialidad}>
+                        {busquedaOriginal.reporte.direccion}
+                      </Text>
+                    </View>
+                    <Pressable
+                      onPress={() => confirmarDuplicado(busquedaOriginal.reporte)}
+                      disabled={procesando}
+                      role="button"
+                      accessibilityLabel={`Marcar como duplicado de ${busquedaOriginal.reporte.codigo}`}
+                      style={({ pressed }) => pressed && estilos.tocado}
+                    >
+                      <Ionicons name="checkmark-circle-outline" size={26} color="#2563EB" />
+                    </Pressable>
+                  </View>
+                )}
+              </>
+            )}
+          </View>
+
+          <View style={estilos.bloque}>
             <Text style={estilos.tituloBloque}>Foto del arreglo</Text>
             {pantalla.reporte.fotos.find((f) => f.momento === 'arreglo') && (
               <Image
@@ -389,6 +508,8 @@ const estilos = StyleSheet.create({
   },
   filaCuadrillaActiva: { borderColor: '#16A34A', backgroundColor: '#F0FDF4' },
   nombreCuadrilla: { fontSize: 15, fontWeight: '600', color: '#1F2937' },
+  textos: { flex: 1 },
+  especialidad: { fontSize: 13, color: '#64748B', marginTop: 2 },
   input: {
     borderWidth: 1,
     borderColor: '#D1D5D8',
