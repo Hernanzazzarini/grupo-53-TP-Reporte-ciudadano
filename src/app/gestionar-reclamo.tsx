@@ -80,7 +80,7 @@ export default function PantallaGestionarReclamo() {
       }
 
       const [cuadrillas, original] = await Promise.all([
-        cuadrillasParaReporte(id),
+        cuadrillasParaReporte(reporte),
         reporte.duplicadoDe ? reportePorId(reporte.duplicadoDe) : Promise.resolve(null),
       ]);
       setPantalla({ fase: 'listo', reporte, historial, cuadrillas, original });
@@ -107,7 +107,7 @@ export default function PantallaGestionarReclamo() {
     if (!id) return;
     setProcesando(true);
     try {
-      await cambiarEstado(id, estado, comentario.trim() || null, usuario.id);
+      await cambiarEstado(id, estado, comentario.trim() || null);
       setComentario('');
       await cargar();
     } catch (error) {
@@ -124,7 +124,7 @@ export default function PantallaGestionarReclamo() {
     if (!id) return;
     setProcesando(true);
     try {
-      await asignarCuadrilla(id, cuadrillaId, usuario.id);
+      await asignarCuadrilla(id, cuadrillaId);
       await cargar();
     } catch (error) {
       Alert.alert(
