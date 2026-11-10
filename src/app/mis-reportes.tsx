@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -96,7 +97,12 @@ export default function PantallaMisReportes() {
   const alternarAvisos = async () => {
     const proximo = !avisos;
     setAvisos(proximo);
-    await definirAvisosActivos(proximo);
+    try {
+      await definirAvisosActivos(proximo);
+    } catch (error) {
+      setAvisos(!proximo);
+      Alert.alert('No se pudo cambiar los avisos', mensajeDeError(error));
+    }
   };
 
   const reportesVisibles =
