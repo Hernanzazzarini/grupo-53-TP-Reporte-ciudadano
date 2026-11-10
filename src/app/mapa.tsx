@@ -1,13 +1,13 @@
-import { Coordenadas, Reporte, Pins, EstadoReporte } from '../tipos/index';
-import { leerUbicacion } from '../lib/leer-ubicacion'
-import { obtenerReportes } from '../servicios/mapa'
-import { useEffect, useState } from 'react';
-import { Pressable, View, Text, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { leerUbicacion } from '../lib/leer-ubicacion';
+import { obtenerReportes, obtenerTiposDeReporte } from '../servicios/mapa';
+import { Coordenadas, EstadoReporte, Reporte, TipoDeReporte } from '../tipos/index';
 
 export default function Mapa() {
     const [ubicacion, setUbicacion] = useState<Coordenadas | null>(null);
@@ -15,6 +15,7 @@ export default function Mapa() {
     const [reporte, setReporte] = useState<Reporte[] | null>(null);
     const [tipoSeleccionado, setTipoSeleccionado] = useState<string | null>(null);
     const [estadoSeleccionado, setEstadoSeleccionado] = useState<EstadoReporte | null>(null);
+    const [tipos, setTipos] = useState<TipoDeReporte[]>([]);
 
     useEffect(() => {
         async function cargarCoordenadas() {
@@ -42,18 +43,20 @@ export default function Mapa() {
             }
         }
         cargarReportes();
+
+        async function cargarTipos() {
+            try {
+                const resultado = await obtenerTiposDeReporte();
+                setTipos(resultado);
+            } catch (e) {
+                setError('No se pudieron cargar los tipos de reportes.');
+            }
+        }
+
+        cargarTipos();
+
     }, []);
 
-    const pins: Pins[] = (reporte ?? []).map(reporte => ({
-        id: reporte.id,
-        tipoId: reporte.tipoId,
-        descripcion: reporte.descripcion ?? 'Sin descripción',
-        coordenadas: {
-            latitude: reporte.coordenadas.latitud,
-            longitude: reporte.coordenadas.longitud,
-        },
-        estado: reporte.estado,
-    }));
     const coloresPins: Record<EstadoReporte, { color: string; etiqueta: string }
     > = {
         recibido: { color: "#2196F3", etiqueta: "Recibido" },
@@ -137,22 +140,20 @@ export default function Mapa() {
 
                         <Picker
                             selectedValue={tipoSeleccionado}
-                            onValueChange={(valor) =>
-                                setTipoSeleccionado(valor)
-                            }
+                            onValueChange={(valor) => setTipoSeleccionado(valor)}
                         >
                             <Picker.Item
                                 label="Todos los tipos"
                                 value={null}
                             />
 
-                            <Picker.Item label="Rotura" value="tip-bache" />
-                            <Picker.Item label="Vereda" value="tip-vereda" />
-                            <Picker.Item label="Luz" value="tip-luz" />
-                            <Picker.Item label="Limpieza" value="tip-basura" />
-                            <Picker.Item label="Semaforo" value="tip-semaforo" />
-                            <Picker.Item label="Arbolado" value="tip-arbol" />
-                            <Picker.Item label="Otro" value="tip-otro" />
+                            {tipos.map(tipo => (
+                                <Picker.Item
+                                    key={tipo.id}
+                                    label={tipo.nombre}
+                                    value={tipo.id}
+                                />
+                            ))}
                         </Picker>
                     </View>
 
