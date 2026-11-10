@@ -13,22 +13,43 @@ import {
   adherirAReporte,
   obtenerReportesCercanos,
 } from "../servicios/adhesiones";
-import { Reporte } from "../tipos/index";
+import { Reporte, Coordenadas } from "../tipos/index";
+import { leerUbicacion, obtenerDireccion } from "../lib/leer-ubicacion";
 
 export default function ReportesCercanosScreen() {
   const [cargando, setCargando] = useState(true);
   const [reportes, setReportes] = useState<Reporte[]>([]);
   const [recargando, setRecargando] = useState(false);
+  const [coordenadas, setCoordenadas] = useState<Coordenadas | null>(null);
+  const [direccion, setDireccion] = useState("");
 
   const cargarDatos = useCallback(async (esRecarga = false) => {
     if (esRecarga) setRecargando(true);
     else setCargando(true);
 
     try {
-      const lat = -33.0089;
-      const lng = -58.5142;
+      const nuevaUbicacion = await leerUbicacion();
 
-      const cercanos = await obtenerReportesCercanos(lat, lng, 50);
+      if (!nuevaUbicacion) {
+        Alert.alert(
+          "Ubicación no disponible",
+          "No pudimos obtener tu ubicación. Verificá que tengas activado el GPS y los permisos de ubicación."
+        );
+        setReportes([]);
+        return;
+      }
+      setCoordenadas(nuevaUbicacion);
+
+      const nuevaDireccion = await obtenerDireccion(nuevaUbicacion);
+
+      setDireccion(nuevaDireccion ?? "Dirección no disponible");
+
+      const cercanos = await obtenerReportesCercanos(
+        nuevaUbicacion.latitud,
+        nuevaUbicacion.longitud,
+        50
+      );
+
       setReportes(cercanos);
     } catch (error: any) {
       console.error(error);
@@ -68,8 +89,24 @@ export default function ReportesCercanosScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.encabezado}>
-        <Text style={styles.titulo}>Problemas cerca tuyo</Text>
-        {recargando && <ActivityIndicator size="small" color="#2563EB" />}
+        <View style={styles.filaTitulo}>
+          <Text style={styles.titulo}>Problemas cerca tuyo</Text>
+          {recargando && (
+            <ActivityIndicator size="small" color="#2563EB" />
+          )}
+        </View>
+
+        <View style={styles.tarjetaUbicacion}>
+          <Text style={styles.iconoUbicacion}>📍</Text>
+          <View style={styles.contenidoUbicacion}>
+            <Text style={styles.etiquetaUbicacion}>
+              TU UBICACIÓN ACTUAL
+            </Text>
+            <Text style={styles.textoUbicacion}>
+              {direccion || "Obteniendo ubicación..."}
+            </Text>
+          </View>
+        </View>
       </View>
 
       {reportes.length === 0 ? (
@@ -126,16 +163,16 @@ const styles = StyleSheet.create({
   },
   textoCarga: { marginTop: 10, fontSize: 18, color: "#64748B" },
   encabezado: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
+    flexDirection: "column",
+    alignItems: "stretch",
+    marginBottom: 20,
     marginTop: 40,
   },
   titulo: { fontSize: 24, fontWeight: "bold", color: "#1F2937" },
   textoVacio: {
-    fontSize: 18,
+    fontSize: 24,
     textAlign: "center",
+    fontWeight: "bold",
     marginTop: 20,
     color: "#64748B",
   },
@@ -172,5 +209,54 @@ const styles = StyleSheet.create({
   },
   textoBoton: { color: "white", fontSize: 16, fontWeight: "bold" },
   botonVolver: { marginTop: 10, padding: 12, alignItems: "center" },
-  textoBotonVolver: { fontSize: 16, color: "#64748B", fontWeight: "600" },
+  textoBotonVolver: {
+    fontSize: 16,
+    color: "#64748B",
+    fontWeight: "600"
+
+  },
+  filaTitulo: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  tarjetaUbicacion: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+
+  iconoUbicacion: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+
+  contenidoUbicacion: {
+    flex: 1,
+  },
+
+  etiquetaUbicacion: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: "#2563EB",
+    marginBottom: 4,
+    letterSpacing: 0.8,
+  },
+
+  textoUbicacion: {
+    fontSize: 14,
+    color: "#475569",
+    fontWeight: "500",
+  },
+
 });
