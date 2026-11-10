@@ -1,7 +1,7 @@
 
 import { cliente } from '../api/cliente';
 import type { RespuestaLista } from '../tipos/api';
-import type { Reporte } from '../tipos/index';
+import type { Reporte, TipoDeReporte } from '../tipos/index';
 
 export async function obtenerReportes(): Promise<Reporte[]> {
   const respuesta = await cliente.get<RespuestaLista<Reporte>>(
@@ -15,4 +15,10 @@ export async function obtenerReportes(): Promise<Reporte[]> {
   );
 
   return respuesta.data.datos;
+}
+
+export async function obtenerTiposDeReporte(): Promise<TipoDeReporte[]> {
+    const respuesta = await cliente.get('/tipos-de-reporte');
+
+    return respuesta.data.datos;
 }
