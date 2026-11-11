@@ -3,19 +3,6 @@ import { ErrorDeApi } from '../api/errores';
 import { CambioDeEstado, Reporte } from '../tipos';
 import { RespuestaLista, RespuestaUno } from '../tipos/api';
 
-export const SIMULAR = {
-  listaVacia: false,
-  errorDeRed: false,
-  cambioDeEstado: false,
-};
-
-export class ErrorDeRed extends Error {
-  constructor() {
-    super('No pudimos conectarnos. Revisá tu conexión e intentá de nuevo.');
-    this.name = 'ErrorDeRed';
-  }
-}
-
 const MAXIMO_POR_PAGINA = 100;
 
 const esNoEncontrado = (error: unknown): boolean =>
