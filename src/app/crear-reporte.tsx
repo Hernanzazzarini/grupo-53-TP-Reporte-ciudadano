@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import { GrabadorDeAudio } from '../componentes/GrabadorDeAudio';
 import { geocodificarDireccion, leerUbicacion, obtenerDireccion } from '../lib/leer-ubicacion';
 import { adherirAReporte } from '../servicios/adhesiones';
 import {
@@ -92,6 +93,7 @@ export default function PantallaCatalogo() {
 
     const [foto, setFoto] = useState<string | null>(null);
     const [descripcion, setDescripcion] = useState('');
+    const [audio, setAudio] = useState<string | null>(null);
     const [enviando, setEnviando] = useState(false);
     const tomarFoto = async () => {
         const permiso = await ImagePicker.requestCameraPermissionsAsync();
@@ -156,6 +158,7 @@ export default function PantallaCatalogo() {
                 tipoId: tipoId || 'tip-otro',
                 descripcion: descripcion || null,
                 audioUrl: null,
+                audioLocal: audio,
                 fotosLocales: [foto!],
                 coordenadas,
                 direccion,
@@ -228,6 +231,8 @@ export default function PantallaCatalogo() {
                 value={descripcion}
                 onChangeText={setDescripcion}
             />
+            <Text style={styles.label}>Nota de voz (opcional)</Text>
+            <GrabadorDeAudio uri={audio} onCambio={setAudio} />
             <Text style={styles.label}>Ubicacion</Text>
             <View style={styles.boxUbicacion}>
                 <Ionicons name="location-outline" size={24} color="#DC2626" />
