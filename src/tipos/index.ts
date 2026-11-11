@@ -56,6 +56,7 @@ export interface ReporteDatos {
   tipoId: string;
   descripcion: string | null;
   audioUrl: string | null;
+  audioLocal?: string | null;
   fotosLocales: string[];
   coordenadas: Coordenadas;
   direccion: string;

@@ -31,6 +31,25 @@ export async function sumarmeAReporte(id: string): Promise<void> {
     await cliente.post(`/reportes/${id}/adhesiones`);
 }
 
+async function subirAudio(uri: string): Promise<string> {
+    const archivo = new FormData();
+
+    archivo.append('archivo', {
+        uri,
+        name: uri.split('/').pop() || 'nota-de-voz.m4a',
+        type: 'audio/mp4',
+    } as any);
+
+    const respuesta = await cliente.post<RespuestaUno<ArchivoSubido>>('/archivos', archivo);
+    const url = respuesta.data?.datos?.url;
+
+    if (!url) {
+        throw new Error('El servidor no devolvió la URL de la nota de voz.');
+    }
+
+    return url;
+}
+
 export async function enviarReporte(datos: ReporteDatos) {
     let etapa = 'inicio';
 
@@ -91,13 +110,19 @@ export async function enviarReporte(datos: ReporteDatos) {
             })
         );
 
+        etapa = 'subida del audio';
+
+        const audioUrl = datos.audioLocal
+            ? await subirAudio(datos.audioLocal)
+            : datos.audioUrl;
+
         // 3. Crear reporte
         etapa = 'creación del reporte';
 
         const cuerpo = {
             tipoId: datos.tipoId,
             descripcion: datos.descripcion,
-            audioUrl: datos.audioUrl,
+            audioUrl,
             fotos,
             coordenadas: datos.coordenadas,
             direccion: datos.direccion,
