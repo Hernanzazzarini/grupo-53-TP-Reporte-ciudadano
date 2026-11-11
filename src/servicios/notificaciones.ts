@@ -3,10 +3,10 @@ import Storage from 'expo-sqlite/kv-store';
 
 import { EstadoReporte, Reporte } from '../tipos';
 import { ETIQUETAS_ESTADO } from '../utilidades/estados';
+import { actualizarConfiguracion, obtenerUsuarioActual } from './usuarios';
 
 const CLAVE_ESTADOS_VISTOS = 'seguimiento.estadosVistos';
 const CLAVE_ADHESIONES_VISTAS = 'seguimiento.adhesionesVistas';
-const CLAVE_AVISOS_ACTIVOS = 'seguimiento.avisosActivos';
 const CLAVE_YA_OFRECIMOS = 'seguimiento.yaOfrecimosAvisos';
 
 const CANAL = 'cambios-de-estado';
@@ -54,13 +54,11 @@ export const marcarAvisosOfrecidos = async (): Promise<void> => {
   await Storage.setItem(CLAVE_YA_OFRECIMOS, 'true');
 };
 
-export const avisosActivos = async (): Promise<boolean> => {
-  const guardado = await Storage.getItem(CLAVE_AVISOS_ACTIVOS);
-  return guardado === null ? true : guardado === 'true';
-};
+export const avisosActivos = async (): Promise<boolean> =>
+  obtenerUsuarioActual()?.avisosActivos ?? false;
 
 export const definirAvisosActivos = async (activos: boolean): Promise<void> => {
-  await Storage.setItem(CLAVE_AVISOS_ACTIVOS, String(activos));
+  await actualizarConfiguracion(activos);
 };
 
 type Vistos<T> = Record<string, T>;

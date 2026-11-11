@@ -50,7 +50,7 @@ export async function marcarComoDuplicado(
     const respuesta = await cliente.post<RespuestaUno<Reporte>>(
       `/reportes/${reporteId}/duplicado`,
       {
-        duplicadoDe: reporteOriginalId,
+        originalId: reporteOriginalId,
       },
     );
     return respuesta.data.datos;
