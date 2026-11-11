@@ -1,4 +1,4 @@
-import { Coordenadas, Reporte } from '@/tipos';
+import { Coordenadas, Reporte,ReporteDatos } from '@/tipos';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -13,6 +13,13 @@ import {
     obtenerReportesCercanos,
 } from '../servicios/reportes';
 import { obtenerUsuarioActual } from '../servicios/usuarios';
+import * as Network from 'expo-network';
+
+import {
+    guardarReportePendiente,
+    escucharConexion,
+    sincronizarReportesPendientes,
+} from '../lib/cola-reportes';
 
 export default function PantallaCatalogo() {
     const [coordenadas, setCoordenadas] = useState<Coordenadas>({ latitud: -33.0077777, longitud: -58.5142, });
@@ -47,6 +54,18 @@ export default function PantallaCatalogo() {
     useEffect(() => {
         obtenerUbicacion();
     }, []);
+    
+    useEffect(() => {
+    //Intenta sincronizar los reportes pendientes al abrir la pantalla
+    void sincronizarReportesPendientes();
+
+    //Escucha cuando vuelve la conexiòn
+    const suscripcion = escucharConexion();
+
+    return () => {
+        suscripcion.remove();
+    };
+}, []);
 
     useEffect(() => {
         if (actualizandoDesdeMapa.current) {
@@ -145,48 +164,72 @@ export default function PantallaCatalogo() {
         }
     };
 
-    const crearReporte = async () => {
-        if (!foto) {
-            Alert.alert('Foto obligatoria', 'Sacá una foto antes de continuar.');
+    
+const crearReporte = async () => {
+    if (!foto) {
+        Alert.alert('Foto obligatoria', 'Sacá una foto antes de continuar.');
+        return;
+    }
+
+    setEnviando(true);
+
+    const datosReporte: ReporteDatos = {
+        tipoId: tipoId || 'tip-otro',
+        descripcion: descripcion || null,
+        audioUrl: null,
+        audioLocal: audio,
+        fotosLocales: [foto!],
+        coordenadas,
+        direccion,
+    };
+
+    try {
+        const red = await Network.getNetworkStateAsync();
+
+        if (!red.isConnected || red.isInternetReachable === false) {
+            await guardarReportePendiente(datosReporte);
+            Alert.alert('Reporte guardado', 'Se enviará cuando vuelva la conexión.');
             return;
         }
 
-        setEnviando(true);
+        const respuesta = await enviarReporte(datosReporte);
 
-        try {
-            const respuesta = await enviarReporte({
-                tipoId: tipoId || 'tip-otro',
-                descripcion: descripcion || null,
-                audioUrl: null,
-                audioLocal: audio,
-                fotosLocales: [foto!],
-                coordenadas,
-                direccion,
-            });
+        console.log('Respuesta del servidor:', respuesta);
 
-            console.log('Respuesta del servidor:', respuesta);
+        Alert.alert(
+            '¡Reporte creado!',
+            `Número de seguimiento: ${respuesta.datos.codigo}`,
+            [{ text: 'Aceptar', onPress: () => router.replace('/') }]
+        );
 
-            Alert.alert(
-                '¡Reporte creado!',
-                `Número de seguimiento: ${respuesta.datos.codigo}`,
-                [{ text: 'Aceptar', onPress: () => router.replace('/') }]
-            );
+    } catch (error: any) {
+        console.log('ERROR COMPLETO:', error);
+        console.log('ERROR DEL SERVIDOR:', error.response?.data);
 
-        } catch (error: any) {
-            console.log('ERROR COMPLETO:', error);
-            console.log('ERROR DEL SERVIDOR:', error.response?.data);
+        const red = await Network.getNetworkStateAsync();
+
+        if (!red.isConnected || red.isInternetReachable === false) {
+            await guardarReportePendiente(datosReporte);
 
             Alert.alert(
-                'Error al enviar reporte',
-                error.response?.data?.mensaje ||
-                error.message ||
-                'No se pudo enviar el reporte.'
+                'Reporte guardado',
+                'Se enviará cuando vuelva la conexión.'
             );
-
-        } finally {
-            setEnviando(false);
+            return;
         }
-    };
+
+        Alert.alert(
+            'Error al enviar reporte',
+            error.response?.data?.mensaje ||
+            error.message ||
+            'No se pudo enviar el reporte.'
+        );
+
+    } finally {
+        setEnviando(false);
+    }
+};
+
 
     return (
         <ScrollView ref={scrollRef}
@@ -373,7 +416,15 @@ export default function PantallaCatalogo() {
             {!mostrarCercanos && (
                 <TouchableOpacity
                     style={styles.botonEnviar}
-                    onPress={buscarCercanos}
+                    onPress={async () => {
+    const red = await Network.getNetworkStateAsync();
+
+    if (!red.isConnected || red.isInternetReachable === false) {
+        await crearReporte();
+    } else {
+        await buscarCercanos();
+    }
+}}
                     disabled={enviando || buscandoCercanos}
                 >
                     <Text style={styles.textoBotonEnviar}>
