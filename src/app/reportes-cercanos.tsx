@@ -9,12 +9,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { leerUbicacion, obtenerDireccion } from "../lib/leer-ubicacion";
 import {
   adherirAReporte,
   obtenerReportesCercanos,
 } from "../servicios/adhesiones";
-import { Reporte, Coordenadas } from "../tipos/index";
-import { leerUbicacion, obtenerDireccion } from "../lib/leer-ubicacion";
+import { Coordenadas, Reporte } from "../tipos/index";
 
 export default function ReportesCercanosScreen() {
   const [cargando, setCargando] = useState(true);
@@ -22,18 +22,20 @@ export default function ReportesCercanosScreen() {
   const [recargando, setRecargando] = useState(false);
   const [coordenadas, setCoordenadas] = useState<Coordenadas | null>(null);
   const [direccion, setDireccion] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const cargarDatos = useCallback(async (esRecarga = false) => {
     if (esRecarga) setRecargando(true);
     else setCargando(true);
 
+    setError(null);
+
     try {
       const nuevaUbicacion = await leerUbicacion();
 
       if (!nuevaUbicacion) {
-        Alert.alert(
-          "Ubicación no disponible",
-          "No pudimos obtener tu ubicación. Verificá que tengas activado el GPS y los permisos de ubicación."
+        setError(
+          "No pudimos obtener tu ubicación. Verificá que tengas activado el GPS y los permisos de ubicación.",
         );
         setReportes([]);
         return;
@@ -41,21 +43,21 @@ export default function ReportesCercanosScreen() {
       setCoordenadas(nuevaUbicacion);
 
       const nuevaDireccion = await obtenerDireccion(nuevaUbicacion);
-
       setDireccion(nuevaDireccion ?? "Dirección no disponible");
 
       const cercanos = await obtenerReportesCercanos(
         nuevaUbicacion.latitud,
         nuevaUbicacion.longitud,
-        50
+        50,
       );
 
       setReportes(cercanos);
     } catch (error: any) {
       console.error(error);
-      Alert.alert(
-        "Error",
-        error.message || "No pudimos buscar los reportes cercanos.",
+
+      setError(
+        error.message ||
+          "No pudimos conectar con el servidor. Revisá tu conexión a internet.",
       );
     } finally {
       setCargando(false);
@@ -86,22 +88,38 @@ export default function ReportesCercanosScreen() {
     );
   }
 
+  if (error) {
+    return (
+      <View style={styles.centrado}>
+        <Text style={styles.textoError}>{error}</Text>
+        <TouchableOpacity
+          style={styles.botonReintentar}
+          onPress={() => cargarDatos()}
+        >
+          <Text style={styles.textoBoton}>REINTENTAR</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.botonVolver}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.textoBotonVolver}>Volver al inicio</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.encabezado}>
         <View style={styles.filaTitulo}>
           <Text style={styles.titulo}>Problemas cerca tuyo</Text>
-          {recargando && (
-            <ActivityIndicator size="small" color="#2563EB" />
-          )}
+          {recargando && <ActivityIndicator size="small" color="#2563EB" />}
         </View>
 
         <View style={styles.tarjetaUbicacion}>
           <Text style={styles.iconoUbicacion}>📍</Text>
           <View style={styles.contenidoUbicacion}>
-            <Text style={styles.etiquetaUbicacion}>
-              TU UBICACIÓN ACTUAL
-            </Text>
+            <Text style={styles.etiquetaUbicacion}>TU UBICACIÓN ACTUAL</Text>
             <Text style={styles.textoUbicacion}>
               {direccion || "Obteniendo ubicación..."}
             </Text>
@@ -160,8 +178,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#F3F4F6",
+    padding: 20,
   },
   textoCarga: { marginTop: 10, fontSize: 18, color: "#64748B" },
+  textoError: {
+    fontSize: 18,
+    color: "#EF4444",
+    textAlign: "center",
+    marginBottom: 20,
+    fontWeight: "bold",
+  },
+  botonReintentar: {
+    backgroundColor: "#2563EB",
+    padding: 14,
+    borderRadius: 8,
+    alignItems: "center",
+    width: "100%",
+  },
   encabezado: {
     flexDirection: "column",
     alignItems: "stretch",
@@ -212,8 +245,7 @@ const styles = StyleSheet.create({
   textoBotonVolver: {
     fontSize: 16,
     color: "#64748B",
-    fontWeight: "600"
-
+    fontWeight: "600",
   },
   filaTitulo: {
     flexDirection: "row",
@@ -235,16 +267,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
   },
-
   iconoUbicacion: {
     fontSize: 24,
     marginRight: 12,
   },
-
   contenidoUbicacion: {
     flex: 1,
   },
-
   etiquetaUbicacion: {
     fontSize: 11,
     fontWeight: "bold",
@@ -252,11 +281,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     letterSpacing: 0.8,
   },
-
   textoUbicacion: {
     fontSize: 14,
     color: "#475569",
     fontWeight: "500",
   },
-
 });
