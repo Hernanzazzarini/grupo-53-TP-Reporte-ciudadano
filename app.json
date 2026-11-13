@@ -14,7 +14,7 @@
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.CAMERA"
       ],
-      "package": "com.anonymous.reporteciudadano"
+      "package": "com.grupo53.reporteciudadano"
     },
     "web": {
       "output": "static",
