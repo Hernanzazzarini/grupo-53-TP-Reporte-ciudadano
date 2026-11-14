@@ -14,7 +14,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { mensajeDeError } from '../api/errores';
+import { TarjetaPendiente } from '../componentes/TarjetaPendiente';
 import { TarjetaReporte } from '../componentes/TarjetaReporte';
+import {
+  escucharSincronizacion,
+  obtenerReportesPendientes,
+  type ReportePendiente,
+} from '../lib/cola-reportes';
 import {
   avisosActivos,
   definirAvisosActivos,
@@ -38,6 +44,7 @@ export default function PantallaMisReportes() {
 
   const [pantalla, setPantalla] = useState<EstadoPantalla>({ fase: 'cargando' });
   const [categorias, setCategorias] = useState<TipoDeReporte[]>([]);
+  const [pendientes, setPendientes] = useState<ReportePendiente[]>([]);
   const [filtro, setFiltro] = useState<EstadoReporte | null>(null);
   const [recargando, setRecargando] = useState(false);
 
@@ -45,23 +52,29 @@ export default function PantallaMisReportes() {
   const [ofrecerAvisos, setOfrecerAvisos] = useState(false);
 
   const cargar = useCallback(async () => {
-    try {
-      const [reportes, tipos] = await Promise.all([
-        misReportes(),
-        obtenerTiposDeReporte(),
-      ]);
-      setCategorias(tipos);
-      setPantalla({ fase: 'listo', reportes });
-    } catch (error) {
-      setPantalla({ fase: 'error', mensaje: mensajeDeError(error) });
-    }
+    const [reportes, tipos, guardados] = await Promise.allSettled([
+      misReportes(),
+      obtenerTiposDeReporte(),
+      obtenerReportesPendientes(),
+    ]);
+
+    if (tipos.status === 'fulfilled') setCategorias(tipos.value);
+    setPendientes(guardados.status === 'fulfilled' ? guardados.value : []);
+
+    setPantalla(
+      reportes.status === 'fulfilled'
+        ? { fase: 'listo', reportes: reportes.value }
+        : { fase: 'error', mensaje: mensajeDeError(reportes.reason) },
+    );
   }, []);
 
   useFocusEffect(
     useCallback(() => {
       cargar();
-      avisosActivos().then(setAvisos);
+      avisosActivos().then(setAvisos).catch(() => {});
       revisarSiOfrecemosAvisos();
+
+      return escucharSincronizacion(cargar);
     }, [cargar]),
   );
 
@@ -158,6 +171,12 @@ export default function PantallaMisReportes() {
         </View>
       )}
 
+      {pantalla.fase === 'error' && pendientes.length > 0 && (
+        <View style={estilos.pendientesSinConexion}>
+          <SeccionPendientes pendientes={pendientes} categorias={categorias} />
+        </View>
+      )}
+
       {pantalla.fase === 'error' && (
         <View style={estilos.centrado}>
           <Ionicons name="cloud-offline-outline" size={56} color="#94A3B8" />
@@ -242,6 +261,11 @@ export default function PantallaMisReportes() {
             refreshControl={
               <RefreshControl refreshing={recargando} onRefresh={alTirarParaRecargar} />
             }
+            ListHeaderComponent={
+              filtro ? null : (
+                <SeccionPendientes pendientes={pendientes} categorias={categorias} />
+              )
+            }
             renderItem={({ item }) => (
               <TarjetaReporte
                 reporte={item}
@@ -250,6 +274,7 @@ export default function PantallaMisReportes() {
               />
             )}
             ListEmptyComponent={
+              !filtro && pendientes.length > 0 ? null : (
               <View style={estilos.centrado}>
                 <Ionicons name="document-text-outline" size={56} color="#94A3B8" />
                 <Text style={estilos.tituloVacio}>
@@ -261,11 +286,38 @@ export default function PantallaMisReportes() {
                     : 'Cuando reportes un problema, lo vas a ver acá con su número de seguimiento.'}
                 </Text>
               </View>
+              )
             }
           />
         </>
       )}
     </SafeAreaView>
+  );
+}
+
+function SeccionPendientes({
+  pendientes,
+  categorias,
+}: {
+  pendientes: ReportePendiente[];
+  categorias: TipoDeReporte[];
+}) {
+  if (pendientes.length === 0) return null;
+
+  return (
+    <View style={estilos.seccionPendientes}>
+      <Text style={estilos.tituloSeccion}>Guardados sin conexión</Text>
+      <Text style={estilos.textoSeccion}>
+        Se envían solos cuando vuelve la conexión.
+      </Text>
+      {pendientes.map((pendiente) => (
+        <TarjetaPendiente
+          key={pendiente.id}
+          pendiente={pendiente}
+          tipo={categorias.find((c) => c.id === pendiente.datos.tipoId)}
+        />
+      ))}
+    </View>
   );
 }
 
@@ -346,6 +398,23 @@ const estilos = StyleSheet.create({
   lista: {
     padding: 16,
     flexGrow: 1,
+  },
+  pendientesSinConexion: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  seccionPendientes: {
+    marginBottom: 8,
+  },
+  tituloSeccion: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  textoSeccion: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 10,
   },
   centrado: {
     flex: 1,

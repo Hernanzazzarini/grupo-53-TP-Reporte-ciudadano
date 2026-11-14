@@ -14,7 +14,7 @@
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.CAMERA"
       ],
-      "package": "com.anonymous.reporteciudadano"
+      "package": "com.grupo53.reporteciudadano"
     },
     "web": {
       "output": "static",
@@ -48,7 +48,13 @@
       ],
       "expo-asset",
       "expo-sqlite",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Reporte Ciudadano usa Face ID para que ingreses sin escribir la contraseña."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

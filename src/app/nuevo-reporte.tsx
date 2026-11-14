@@ -12,7 +12,7 @@ export default function PantallaCatalogo() {
     const [categorias, setCategorias] = useState<TipoDeReporte[]>([]);
 
     useEffect(() => {
-        obtenerTiposDeReporte().then(setCategorias);
+        obtenerTiposDeReporte().then(setCategorias).catch(() => {});
     }, []);
     const seleccionarCategoria = (tipoId: string) => {
         router.push({ pathname: '/crear-reporte'as any, params: { tipoId } });

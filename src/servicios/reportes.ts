@@ -1,11 +1,26 @@
 
+import Storage from 'expo-sqlite/kv-store';
 import { cliente } from '../api/cliente';
 import type { Coordenadas, Reporte, ReporteDatos, TipoDeReporte } from '../tipos';
 import type { ArchivoSubido, RespuestaLista, RespuestaUno } from '../tipos/api';
 
+const CLAVE_TIPOS_DE_REPORTE = 'reportes.tiposDeReporte';
+
 export async function obtenerTiposDeReporte(): Promise<TipoDeReporte[]> {
-    const respuesta = await cliente.get('/tipos-de-reporte');
-    return respuesta.data.datos;
+    try {
+        const respuesta = await cliente.get('/tipos-de-reporte');
+        const tipos: TipoDeReporte[] = respuesta.data.datos;
+
+        await Storage.setItem(CLAVE_TIPOS_DE_REPORTE, JSON.stringify(tipos));
+
+        return tipos;
+    } catch (error) {
+        const guardados = await Storage.getItem(CLAVE_TIPOS_DE_REPORTE);
+
+        if (guardados) return JSON.parse(guardados) as TipoDeReporte[];
+
+        throw error;
+    }
 }
 
 export async function obtenerReportesCercanos(
