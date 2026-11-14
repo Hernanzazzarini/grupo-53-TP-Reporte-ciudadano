@@ -41,7 +41,7 @@ export default function AvisoSinConexion() {
     <View
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
-      style={[estilos.aviso, { bottom: margenes.bottom + 12 }]}
+      style={[estilos.aviso, { top: margenes.top + 12 }]}
     >
       <Text style={estilos.texto}>
         Sin conexión: los reportes nuevos se guardan y se envían cuando vuelva.
