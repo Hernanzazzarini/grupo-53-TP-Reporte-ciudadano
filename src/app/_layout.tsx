@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AvisosDeEstado from "../componentes/AvisosDeEstado";
+import { escucharConexion, sincronizarReportesPendientes } from "../lib/cola-reportes";
 import { obtenerUsuarioActual, restaurarSesion } from "../servicios/usuarios";
 
 
@@ -14,7 +15,16 @@ export default function RootLayout() {
 
   // Módulo 5: al abrir la app, si hay un token guardado, recupera la sesión (GET /yo)
   useEffect(() => {
-    restaurarSesion().finally(() => setListo(true));
+    restaurarSesion()
+      .then((usuario) => {
+        if (usuario) void sincronizarReportesPendientes();
+      })
+      .finally(() => setListo(true));
+  }, []);
+
+  useEffect(() => {
+    const suscripcion = escucharConexion();
+    return () => suscripcion.remove();
   }, []);
 
   // Mientras se recupera la sesión, se muestra un indicador de carga
