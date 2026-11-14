@@ -41,7 +41,7 @@ export default function AvisoSinConexion() {
     <View
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
-      style={[estilos.aviso, { bottom: margenes.bottom + 12 }]}
+      style={[estilos.aviso, { paddingBottom: margenes.bottom + 10 }]}
     >
       <Text style={estilos.texto}>
         Sin conexión: los reportes nuevos se guardan y se envían cuando vuelva.
@@ -52,19 +52,9 @@ export default function AvisoSinConexion() {
 
 const estilos = StyleSheet.create({
   aviso: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
+    paddingTop: 10,
+    paddingHorizontal: 16,
     backgroundColor: '#1F2937',
-    pointerEvents: 'none',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
   },
   texto: {
     color: '#FFFFFF',
