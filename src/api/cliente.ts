@@ -10,7 +10,7 @@ if (!URL_API) {
 
 export const cliente = axios.create({
   baseURL: URL_API,
-  timeout: 10_000,
+  timeout: 60_000,
 });
 
 type ObtenerToken = () => Promise<string | null>;
