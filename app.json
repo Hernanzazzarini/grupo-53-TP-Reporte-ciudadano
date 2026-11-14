@@ -12,9 +12,18 @@
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
       ],
-      "package": "com.grupo53.reporteciudadano"
+      "package": "com.grupo53.reporteciudadano",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAUjgWHOynLlqypaToaS2RZ5NVN60JSbs0"
+        }
+      }
     },
     "web": {
       "output": "static",
@@ -59,6 +68,19 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e36dfb51-e61c-4b3b-bde8-d75425d0aa53"
+      }
+    },
+    "owner": "elisaexpos-team",
+    "ios": {
+      "bundleIdentifier": "com.grupo53.reporteciudadano",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     }
   }
 }
