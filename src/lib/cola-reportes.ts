@@ -85,7 +85,14 @@ export async function guardarReportePendiente(datos: ReporteDatos) {
   return id;
 }
 
-export async function obtenerReportesPendientes() {
+export interface ReportePendiente {
+  id: string;
+  datos: ReporteDatos;
+  estado: string;
+  creado_en: string;
+}
+
+export async function obtenerReportesPendientes(): Promise<ReportePendiente[]> {
   const db = await inicializarColaReportes();
 
   const filas = await db.getAllAsync<{
@@ -122,10 +129,21 @@ function borrarArchivos(datos: ReporteDatos) {
   }
 }
 
+const alTerminarDeSincronizar = new Set<() => void>();
+
+export function escucharSincronizacion(avisar: () => void) {
+  alTerminarDeSincronizar.add(avisar);
+
+  return () => {
+    alTerminarDeSincronizar.delete(avisar);
+  };
+}
+
 export async function sincronizarReportesPendientes() {
   if (sincronizando) return;
 
   sincronizando = true;
+  let huboCambios = false;
 
   try {
     const red = await Network.getNetworkStateAsync();
@@ -147,6 +165,7 @@ export async function sincronizarReportesPendientes() {
         );
 
         borrarArchivos(reporte.datos);
+        huboCambios = true;
       } catch (error) {
         if (laApiLoRechazo(error)) {
           await db.runAsync(
@@ -155,6 +174,7 @@ export async function sincronizarReportesPendientes() {
           );
 
           borrarArchivos(reporte.datos);
+          huboCambios = true;
           continue;
         }
 
@@ -163,6 +183,10 @@ export async function sincronizarReportesPendientes() {
     }
   } finally {
     sincronizando = false;
+  }
+
+  if (huboCambios) {
+    alTerminarDeSincronizar.forEach((avisar) => avisar());
   }
 }
 
