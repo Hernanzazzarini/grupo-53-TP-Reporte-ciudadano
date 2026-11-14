@@ -60,7 +60,7 @@ export default function PantallaMisReportes() {
   useFocusEffect(
     useCallback(() => {
       cargar();
-      avisosActivos().then(setAvisos);
+      avisosActivos().then(setAvisos).catch(() => {});
       revisarSiOfrecemosAvisos();
     }, [cargar]),
   );
