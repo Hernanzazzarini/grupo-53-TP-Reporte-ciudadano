@@ -4,8 +4,17 @@ import { Directory, File, Paths } from 'expo-file-system';
 import * as Network from 'expo-network';
 import type { ReporteDatos } from '../tipos';
 import { enviarReporte } from '../servicios/reportes';
+import { CODIGO_SIN_CONEXION, ErrorDeApi } from '../api/errores';
 
 const NOMBRE_BASE = 'reportes-pendientes.db';
+
+const ERRORES_PASAJEROS = [
+  CODIGO_SIN_CONEXION,
+  '',
+  'ERROR_INTERNO',
+  'ALMACEN_NO_DISPONIBLE',
+  'NO_AUTENTICADO',
+];
 
 let baseDatos: SQLite.SQLiteDatabase | null = null;
 let sincronizando = false;
@@ -96,6 +105,23 @@ export async function obtenerReportesPendientes() {
   }));
 }
 
+function laApiLoRechazo(error: unknown) {
+  return error instanceof ErrorDeApi && !ERRORES_PASAJEROS.includes(error.codigo);
+}
+
+function borrarArchivos(datos: ReporteDatos) {
+  for (const uri of [
+    ...datos.fotosLocales,
+    ...(datos.audioLocal ? [datos.audioLocal] : []),
+  ]) {
+    const archivo = new File(uri);
+
+    if (archivo.exists) {
+      archivo.delete();
+    }
+  }
+}
+
 export async function sincronizarReportesPendientes() {
   if (sincronizando) return;
 
@@ -120,17 +146,18 @@ export async function sincronizarReportesPendientes() {
           reporte.id
         );
 
-        for (const uri of [
-          ...reporte.datos.fotosLocales,
-          ...(reporte.datos.audioLocal ? [reporte.datos.audioLocal] : []),
-        ]) {
-          const archivo = new File(uri);
-
-          if (archivo.exists) {
-            archivo.delete();
-          }
-        }
+        borrarArchivos(reporte.datos);
       } catch (error) {
+        if (laApiLoRechazo(error)) {
+          await db.runAsync(
+            `UPDATE reportes_pendientes SET estado = 'rechazado' WHERE id = ?`,
+            reporte.id
+          );
+
+          borrarArchivos(reporte.datos);
+          continue;
+        }
+
         console.error('No se pudo sincronizar el reporte:', reporte.id);
       }
     }

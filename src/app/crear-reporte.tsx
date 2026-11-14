@@ -17,7 +17,6 @@ import * as Network from 'expo-network';
 
 import {
     guardarReportePendiente,
-    escucharConexion,
     sincronizarReportesPendientes,
 } from '../lib/cola-reportes';
 
@@ -58,13 +57,6 @@ export default function PantallaCatalogo() {
     useEffect(() => {
     //Intenta sincronizar los reportes pendientes al abrir la pantalla
     void sincronizarReportesPendientes();
-
-    //Escucha cuando vuelve la conexiòn
-    const suscripcion = escucharConexion();
-
-    return () => {
-        suscripcion.remove();
-    };
 }, []);
 
     useEffect(() => {
@@ -188,7 +180,11 @@ const crearReporte = async () => {
 
         if (!red.isConnected || red.isInternetReachable === false) {
             await guardarReportePendiente(datosReporte);
-            Alert.alert('Reporte guardado', 'Se enviará cuando vuelva la conexión.');
+            Alert.alert(
+                'Reporte guardado',
+                'Se enviará cuando vuelva la conexión.',
+                [{ text: 'Aceptar', onPress: () => router.replace('/') }]
+            );
             return;
         }
 
@@ -213,7 +209,8 @@ const crearReporte = async () => {
 
             Alert.alert(
                 'Reporte guardado',
-                'Se enviará cuando vuelva la conexión.'
+                'Se enviará cuando vuelva la conexión.',
+                [{ text: 'Aceptar', onPress: () => router.replace('/') }]
             );
             return;
         }
