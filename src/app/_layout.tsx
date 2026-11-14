@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AvisosDeEstado from "../componentes/AvisosDeEstado";
+import AvisoSinConexion from "../componentes/AvisoSinConexion";
 import { escucharConexion, sincronizarReportesPendientes } from "../lib/cola-reportes";
 import { obtenerUsuarioActual, restaurarSesion } from "../servicios/usuarios";
 
@@ -43,6 +44,7 @@ export default function RootLayout() {
     <>
       <AvisosDeEstado />
       <Stack screenOptions={{ headerShown: false }} />
+      <AvisoSinConexion />
 
       {/* Módulo 5: acceso a Mi perfil → Configuración → Cerrar sesión */}
       {mostrarBotonPerfil && (
