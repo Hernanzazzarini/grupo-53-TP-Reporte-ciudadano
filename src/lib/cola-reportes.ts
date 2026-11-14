@@ -166,10 +166,22 @@ export async function sincronizarReportesPendientes() {
   }
 }
 
+const ESPERA_PARA_CONFIRMAR = 2000;
+
 export function escucharConexion() {
-  return Network.addNetworkStateListener(estado => {
-    if (estado.isConnected && estado.isInternetReachable !== false) {
-      sincronizarReportesPendientes();
-    }
+  let temporizador: ReturnType<typeof setTimeout> | undefined;
+
+  const suscripcion = Network.addNetworkStateListener(() => {
+    clearTimeout(temporizador);
+    temporizador = setTimeout(() => {
+      void sincronizarReportesPendientes();
+    }, ESPERA_PARA_CONFIRMAR);
   });
+
+  return {
+    remove: () => {
+      clearTimeout(temporizador);
+      suscripcion.remove();
+    },
+  };
 }
