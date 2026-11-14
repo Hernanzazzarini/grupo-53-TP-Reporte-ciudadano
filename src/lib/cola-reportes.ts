@@ -1,6 +1,6 @@
 
 import * as SQLite from 'expo-sqlite';
-import * as FileSystem from 'expo-file-system/legacy';
+import { Directory, File, Paths } from 'expo-file-system';
 import * as Network from 'expo-network';
 import type { ReporteDatos } from '../tipos';
 import { enviarReporte } from '../servicios/reportes';
@@ -32,27 +32,16 @@ async function copiarArchivo(
   id: string,
   nombre: string
 ): Promise<string> {
-  const directorio =
-    `${FileSystem.documentDirectory}reportes-pendientes/`;
+  const directorio = new Directory(Paths.document, 'reportes-pendientes');
 
-  if (!FileSystem.documentDirectory) {
-    throw new Error('No se encontró el almacenamiento del teléfono.');
-  }
-
-  const info = await FileSystem.getInfoAsync(directorio);
-
-  if (!info.exists) {
-    await FileSystem.makeDirectoryAsync(directorio, {
-      intermediates: true,
-    });
-  }
+  directorio.create({ intermediates: true, idempotent: true });
 
   const original = uri.split('/').pop()?.split('?')[0] || nombre;
-  const destino = `${directorio}${id}-${nombre}-${original}`;
+  const destino = new File(directorio, `${id}-${nombre}-${original}`);
 
-  await FileSystem.copyAsync({ from: uri, to: destino });
+  new File(uri).copy(destino);
 
-  return destino;
+  return destino.uri;
 }
 
 export async function guardarReportePendiente(datos: ReporteDatos) {
@@ -135,7 +124,11 @@ export async function sincronizarReportesPendientes() {
           ...reporte.datos.fotosLocales,
           ...(reporte.datos.audioLocal ? [reporte.datos.audioLocal] : []),
         ]) {
-          await FileSystem.deleteAsync(uri, { idempotent: true });
+          const archivo = new File(uri);
+
+          if (archivo.exists) {
+            archivo.delete();
+          }
         }
       } catch (error) {
         console.error('No se pudo sincronizar el reporte:', reporte.id);
