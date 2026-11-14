@@ -41,7 +41,7 @@ export default function RootLayout() {
     const mostrarBotonPerfil = obtenerUsuarioActual() !== null && ruta === "/";
 
   return (
-    <>
+    <View style={estilos.contenedor}>
       <AvisosDeEstado />
       <Stack screenOptions={{ headerShown: false }} />
       <AvisoSinConexion />
@@ -55,11 +55,12 @@ export default function RootLayout() {
           <Text style={estilos.icono}>👤</Text>
         </Pressable>
       )}
-    </>
+    </View>
   );
 }
 
 const estilos = StyleSheet.create({
+  contenedor: { flex: 1 },
   cargando: { flex: 1, justifyContent: "center", alignItems: "center" },
   botonPerfil: {
     position: "absolute", // flota encima de cualquier pantalla
